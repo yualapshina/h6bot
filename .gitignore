@@ -1,0 +1,4 @@
+.env
+calendar.dat
+client_secrets.json
+__pycache__
