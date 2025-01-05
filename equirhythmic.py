@@ -62,6 +62,8 @@ def find_similar(text, example='очень я тебя люблю'):
     
     
 def check_phrase(text):
+    if not text:
+        text = ''
     text = ' '.join(text.lower().replace('\n', ' ').split())
     result = find_similar(text)
     return '> ' + text + '\n' == result
