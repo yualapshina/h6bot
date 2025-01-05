@@ -108,7 +108,7 @@ def print_plans(period='week', date=None):
     try:
         date_start, date_end = parse_dates(period, date)
     except:
-        print('Проблемы с распознаванием аргументов :(\nОбразец: /print_plans week 20250326')
+        print('Проблемы с распознаванием аргументов :(\nОбразец: /list week 20250326')
         return result.getvalue() 
 
     if period == 'month':
@@ -146,6 +146,18 @@ def print_plans(period='week', date=None):
 def draw_plans(period='week', date=None):
     response = ImageResponse()
     
+    Bold192 = ImageFont.truetype("static/HSE_Sans/HSESans-Bold.otf", size=192)
+    Bold96 = ImageFont.truetype("static/HSE_Sans/HSESans-Bold.otf", size=96)
+    Bold80 = ImageFont.truetype("static/HSE_Sans/HSESans-Bold.otf", size=80)
+    SemiBold128 = ImageFont.truetype("static/HSE_Sans/HSESans-SemiBold.otf", size=128)
+    SemiBold64 = ImageFont.truetype("static/HSE_Sans/HSESans-SemiBold.otf", size=64)
+    SemiBold48 = ImageFont.truetype("static/HSE_Sans/HSESans-SemiBold.otf", size=48)
+    Regular192 = ImageFont.truetype("static/HSE_Sans/HSESans-Regular.otf", size=192)
+    Regular96 = ImageFont.truetype("static/HSE_Sans/HSESans-Regular.otf", size=96)
+    Regular80 = ImageFont.truetype("static/HSE_Sans/HSESans-Regular.otf", size=80)
+    Regular64 = ImageFont.truetype("static/HSE_Sans/HSESans-Regular.otf", size=64)
+    Regular48 = ImageFont.truetype("static/HSE_Sans/HSESans-Regular.otf", size=48)
+    
     try:
         date_start, date_end = parse_dates(period, date)
     except:
@@ -153,9 +165,9 @@ def draw_plans(period='week', date=None):
         draw = ImageDraw.Draw(img)
         draw.multiline_text(
             (140,228),
-            'Проблемы с распознаванием аргументов :(\n\nОбразец:\n/draw_plans week 20250326',
+            'Проблемы с распознаванием аргументов :(\n\nОбразец:\n/posters week 20250326',
             '#102D69',
-            ImageFont.truetype("static/HSE_Sans/HSESans-SemiBold.otf", size=128),
+            SemiBold128,
             spacing=50
         )
         response.add(img)
@@ -169,7 +181,7 @@ def draw_plans(period='week', date=None):
             (286,402),
             'Мероприятий не найдено.\nУра! Или не ура?',
             '#102D69',
-            ImageFont.truetype("static/HSE_Sans/HSESans-SemiBold.otf", size=128),
+            SemiBold128,
             spacing=50
         )
         response.add(img)
@@ -202,36 +214,16 @@ def draw_plans(period='week', date=None):
             img = Image.open('static/bg_synch.png')
             draw = ImageDraw.Draw(img)
             x = 60
-            draw.text(
-                (x, 20),
-                months_nom[date_start.month],
-                '#0F2D69',
-                ImageFont.truetype("static/HSE_Sans/HSESans-Bold.otf", size=96),
-            )
-            x_offset = draw.textlength(months_nom[date_start.month], ImageFont.truetype("static/HSE_Sans/HSESans-Bold.otf", size=96))
-            draw.text(
-                (x + x_offset, 20),
-                ' | синхроны',
-                '#8796B4',
-                ImageFont.truetype("static/HSE_Sans/HSESans-Regular.otf", size=96),
-            )
+            draw.text((x, 20), months_nom[date_start.month], '#0F2D69', Bold96)
+            x_offset = draw.textlength(months_nom[date_start.month], Bold96)
+            draw.text((x + x_offset, 20), ' | синхроны', '#8796B4', Regular96)
             y_offset = 0
             for event in synch:
                 draw.rectangle([x, 208 + y_offset, x + 30, 238 + y_offset], colormap[event['colorId']])
                 timing = datetime.datetime.fromisoformat(event['start']['dateTime'])
                 longday = str(timing.day) + ', ' + weekdays_short[timing.weekday()]
-                draw.text(
-                    (x + 65, 190 + y_offset),
-                    longday,
-                    '#102D69',
-                    ImageFont.truetype("static/HSE_Sans/HSESans-SemiBold.otf", size=48),
-                )    
-                draw.text(
-                    (x + 250, 190 + y_offset),
-                    event['summary'],
-                    '#102D69',
-                    ImageFont.truetype("static/HSE_Sans/HSESans-Regular.otf", size=48),
-                )
+                draw.text((x + 65, 190 + y_offset), longday, '#102D69', SemiBold48)    
+                draw.text((x + 250, 190 + y_offset), event['summary'], '#102D69', Regular48)
                 y_offset += 75
             response.add(img)
             
@@ -239,36 +231,16 @@ def draw_plans(period='week', date=None):
             img = Image.open('static/bg_club.png')
             draw = ImageDraw.Draw(img)
             x = 60
-            draw.text(
-                (x, 20),
-                months_nom[date_start.month],
-                '#0F2D69',
-                ImageFont.truetype("static/HSE_Sans/HSESans-Bold.otf", size=96),
-            )
-            x_offset = draw.textlength(months_nom[date_start.month], ImageFont.truetype("static/HSE_Sans/HSESans-Bold.otf", size=96))
-            draw.text(
-                (x + x_offset, 20),
-                ' | клуб',
-                '#8796B4',
-                ImageFont.truetype("static/HSE_Sans/HSESans-Regular.otf", size=96),
-            )
+            draw.text((x, 20), months_nom[date_start.month], '#0F2D69', Bold96)
+            x_offset = draw.textlength(months_nom[date_start.month], Bold96)
+            draw.text((x + x_offset, 20), ' | клуб', '#8796B4', Regular96)
             y_offset = 0
             for event in club:
                 draw.rectangle([x, 208 + y_offset, x + 30, 238 + y_offset], colormap[event['colorId']])
                 timing = datetime.datetime.fromisoformat(event['start']['dateTime'])
                 longday = str(timing.day) + ', ' + weekdays_short[timing.weekday()]
-                draw.text(
-                    (x + 65, 190 + y_offset),
-                    longday,
-                    '#102D69',
-                    ImageFont.truetype("static/HSE_Sans/HSESans-SemiBold.otf", size=48),
-                )    
-                draw.text(
-                    (x + 250, 190 + y_offset),
-                    event['summary'],
-                    '#102D69',
-                    ImageFont.truetype("static/HSE_Sans/HSESans-Regular.otf", size=48),
-                )
+                draw.text((x + 65, 190 + y_offset), longday, '#102D69', SemiBold48)    
+                draw.text((x + 250, 190 + y_offset), event['summary'], '#102D69', Regular48)
                 y_offset += 75
             response.add(img)
             
@@ -289,34 +261,15 @@ def draw_plans(period='week', date=None):
                     header = f'{date_start.day}-{date_end.day} {months_gen[date_start.month]}'
                 else:
                     header = f'{date_start.day:02d}.{date_start.month:02d} - {date_end.day:02d}.{date_end.month:02d}'
-                draw.text(
-                    (x, 96),
-                    header,
-                    '#0F2D69',
-                    ImageFont.truetype("static/HSE_Sans/HSESans-Bold.otf", size=80),
-                )
-                x_offset = draw.textlength(header, ImageFont.truetype("static/HSE_Sans/HSESans-Bold.otf", size=80))
-                draw.text(
-                    (x + x_offset, 96),
-                    ' | синхроны',
-                    '#8796B4',
-                    ImageFont.truetype("static/HSE_Sans/HSESans-Regular.otf", size=80),
-                )
+                draw.text((x, 96), header, '#0F2D69', Bold80)
+                x_offset = draw.textlength(header, Bold80)
+                draw.text((x + x_offset, 96), ' | синхроны', '#8796B4', Regular80)
                 draw.rectangle([x, 282, x+30, 312], colormap[event['colorId']])
                 timing = datetime.datetime.fromisoformat(event['start']['dateTime'])
                 timetext = f'{timing.day} {months_gen[timing.month]}, {weekdays_long[timing.weekday()]}, {timing.hour:02d}.{timing.minute:02d}'
-                draw.text(
-                    (x + 80, 252),
-                    timetext,
-                    '#102D69',
-                    ImageFont.truetype("static/HSE_Sans/HSESans-SemiBold.otf", size=64),
-                )
-                draw.text(
-                    (x, 339),
-                    event['summary'],
-                    '#102D69',
-                    ImageFont.truetype("static/HSE_Sans/HSESans-Regular.otf", size=64),
-                )
+                draw.text((x + 80, 252), timetext, '#102D69', SemiBold64)
+                draw.text((x, 339), event['summary'], '#102D69', Regular64)
+                
                 lines = event['description'].split('\n')
                 for line in lines:
                     if line.find('Сложность') != -1:
@@ -341,58 +294,23 @@ def draw_plans(period='week', date=None):
                         for key, value in fees.items():
                             if value == '0':
                                 fees[key] = 'бесплатно'
-                draw.text(
-                    (x, 426),
-                    'сложность: ',
-                    '#102D69',
-                    ImageFont.truetype("static/HSE_Sans/HSESans-Regular.otf", size=48),
-                )
-                x_offset = draw.textlength('сложность: ', ImageFont.truetype("static/HSE_Sans/HSESans-Regular.otf", size=48))
-                draw.text(
-                    (x + x_offset, 426),
-                    str(diff),
-                    '#7081A5',
-                    ImageFont.truetype("static/HSE_Sans/HSESans-Regular.otf", size=48),
-                )
+                draw.text((x, 426), 'сложность: ', '#102D69', Regular48)
+                x_offset = draw.textlength('сложность: ', Regular48)
+                draw.text((x + x_offset, 426), str(diff), '#7081A5', Regular48)
                 y_offset = 0
                 if place:
                     y_offset = 65
-                    draw.text(
-                        (x, 491),
-                        'место: ',
-                        '#102D69',
-                        ImageFont.truetype("static/HSE_Sans/HSESans-Regular.otf", size=48),
-                    )
-                    x_offset = draw.textlength('место: ', ImageFont.truetype("static/HSE_Sans/HSESans-Regular.otf", size=48))
-                    draw.text(
-                        (x + x_offset, 491),
-                        place,
-                        '#7081A5',
-                        ImageFont.truetype("static/HSE_Sans/HSESans-Regular.otf", size=48),
-                    )
-                draw.text(
-                    (x, 491 + y_offset),
-                    'взнос: ',
-                    '#102D69',
-                    ImageFont.truetype("static/HSE_Sans/HSESans-Regular.otf", size=48),
-                )
-                x_offset = draw.textlength('взнос: ', ImageFont.truetype("static/HSE_Sans/HSESans-Regular.otf", size=48))
+                    draw.text((x, 491), 'место: ', '#102D69', Regular48)
+                    x_offset = draw.textlength('место: ', Regular48)
+                    draw.text((x + x_offset, 491), place, '#7081A5', Regular48)
+                draw.text((x, 491 + y_offset), 'взнос: ', '#102D69', Regular48)
+                x_offset = draw.textlength('взнос: ', Regular48)
                 if fees['все команды']:
-                    draw.text(
-                        (x + x_offset, 491 + y_offset),
-                        'все команды' + ' - ' + fees['все команды'],
-                        '#7081A5',
-                        ImageFont.truetype("static/HSE_Sans/HSESans-Regular.otf", size=48),
-                    )
+                    draw.text((x + x_offset, 491 + y_offset), 'все команды' + ' - ' + fees['все команды'], '#7081A5', Regular48)
                 else:
                     for key, value in fees.items():
                         if value:
-                            draw.text(
-                                (x + x_offset, 491 + y_offset),
-                                key + ' - ' + value,
-                                '#7081A5',
-                                ImageFont.truetype("static/HSE_Sans/HSESans-Regular.otf", size=48),
-                            )
+                            draw.text((x + x_offset, 491 + y_offset), key + ' - ' + value, '#7081A5', Regular48)
                             y_offset += 65
                 response.add(img)
            
@@ -402,27 +320,12 @@ def draw_plans(period='week', date=None):
                     img = Image.open('static/bg_special.png')
                     draw = ImageDraw.Draw(img)
                     x = 184
-                    draw.text(
-                        (x, 142),
-                        'Лига вузов',
-                        '#0F2D69',
-                        ImageFont.truetype("static/HSE_Sans/HSESans-Bold.otf", size=192),
-                    )
-                    x_offset = draw.textlength('Лига вузов', ImageFont.truetype("static/HSE_Sans/HSESans-Bold.otf", size=192))
-                    draw.text(
-                        (x + x_offset, 142),
-                        event['summary'].split('.')[1],
-                        '#6F81A5',
-                        ImageFont.truetype("static/HSE_Sans/HSESans-Regular.otf", size=192),
-                    )
+                    draw.text((x, 142), 'Лига вузов', '#0F2D69', Bold192)
+                    x_offset = draw.textlength('Лига вузов', Bold192)
+                    draw.text((x + x_offset, 142), event['summary'].split('.')[1], '#6F81A5', Regular192)
                     timing = datetime.datetime.fromisoformat(event['start']['dateTime'])
                     timetext = f'{timing.day} {months_gen[timing.month]}, {weekdays_long[timing.weekday()]}, {timing.hour:02d}.{timing.minute:02d}'
-                    draw.text(
-                        (x, 470),
-                        timetext,
-                        '#102D69',
-                        ImageFont.truetype("static/HSE_Sans/HSESans-SemiBold.otf", size=128),
-                    )
+                    draw.text((x, 470), timetext, '#102D69', SemiBold128)
                     lines = event['description'].split('\n')
                     for line in lines:
                         if line.find('Сложность') != -1:
@@ -432,90 +335,35 @@ def draw_plans(period='week', date=None):
                                 place = line[5:]
                             else:
                                 place = None
-                    draw.text(
-                        (x, 644),
-                        'сложность: ',
-                        '#102D69',
-                        ImageFont.truetype("static/HSE_Sans/HSESans-Regular.otf", size=96),
-                    )
-                    x_offset = draw.textlength('сложность: ', ImageFont.truetype("static/HSE_Sans/HSESans-Regular.otf", size=96))
-                    draw.text(
-                        (x + x_offset, 644),
-                        str(diff),
-                        '#7081A5',
-                        ImageFont.truetype("static/HSE_Sans/HSESans-Regular.otf", size=96),
-                    )
+                    draw.text((x, 644), 'сложность: ', '#102D69', Regular96)
+                    x_offset = draw.textlength('сложность: ', Regular96)
+                    draw.text((x + x_offset, 644), str(diff), '#7081A5', Regular96)
                     y_offset = 0
                     if place:
                         y_offset = 130
-                        draw.text(
-                            (x, 774),
-                            'место: ',
-                            '#102D69',
-                            ImageFont.truetype("static/HSE_Sans/HSESans-Regular.otf", size=96),
-                        )
-                        x_offset = draw.textlength('место: ', ImageFont.truetype("static/HSE_Sans/HSESans-Regular.otf", size=96))
-                        draw.text(
-                            (x + x_offset, 774),
-                            place,
-                            '#7081A5',
-                            ImageFont.truetype("static/HSE_Sans/HSESans-Regular.otf", size=96),
-                        )
-                    draw.text(
-                        (x, 774 + y_offset),
-                        'взнос: ',
-                        '#102D69',
-                        ImageFont.truetype("static/HSE_Sans/HSESans-Regular.otf", size=96),
-                    )
-                    x_offset = draw.textlength('взнос: ', ImageFont.truetype("static/HSE_Sans/HSESans-Regular.otf", size=96))
-                    draw.text(
-                        (x + x_offset, 774 + y_offset),
-                        'студенческие сборные команды - 300',
-                        '#7081A5',
-                        ImageFont.truetype("static/HSE_Sans/HSESans-Regular.otf", size=96),
-                    )
+                        draw.text((x, 774), 'место: ', '#102D69', Regular96)
+                        x_offset = draw.textlength('место: ', Regular96)
+                        draw.text((x + x_offset, 774), place, '#7081A5', Regular96)
+                    draw.text((x, 774 + y_offset), 'взнос: ', '#102D69', Regular96)
+                    x_offset = draw.textlength('взнос: ', Regular96)
+                    draw.text((x + x_offset, 774 + y_offset), 'студенческие сборные команды - 300', '#7081A5', Regular96)
                     y_offset += 130
-                    draw.text(
-                        (x + x_offset, 774 + y_offset),
-                        'студенты одного вуза и школьники - ',
-                        '#7081A5',
-                        ImageFont.truetype("static/HSE_Sans/HSESans-Regular.otf", size=96),
-                    )
+                    draw.text((x + x_offset, 774 + y_offset), 'студенты одного вуза и школьники - ', '#7081A5', Regular96)
                     y_offset += 130
                     x_offset += 880
-                    draw.text(
-                        (x + x_offset, 774 + y_offset),
-                        'бесплатно',
-                        '#7081A5',
-                        ImageFont.truetype("static/HSE_Sans/HSESans-Regular.otf", size=96),
-                    )
+                    draw.text((x + x_offset, 774 + y_offset), 'бесплатно', '#7081A5', Regular96)
                     response.add(img)
                     
                 elif event['summary'].find('Своя игра') != -1:
                     img = Image.open('static/bg_special.png')
                     draw = ImageDraw.Draw(img)
                     x = 184
-                    draw.text(
-                        (x, 142),
-                        'Своя игра',
-                        '#0F2D69',
-                        ImageFont.truetype("static/HSE_Sans/HSESans-Bold.otf", size=192),
-                    )
-                    x_offset = draw.textlength('Своя игра', ImageFont.truetype("static/HSE_Sans/HSESans-Bold.otf", size=192))
-                    draw.text(
-                        (x + x_offset, 142),
-                        event['summary'].split('.')[1],
-                        '#6F81A5',
-                        ImageFont.truetype("static/HSE_Sans/HSESans-Regular.otf", size=192),
-                    )
+                    draw.text((x, 142), 'Своя игра', '#0F2D69', Bold192)
+                    x_offset = draw.textlength('Своя игра', Bold192)
+                    draw.text((x + x_offset, 142), event['summary'].split('.')[1], '#6F81A5', Regular192)
                     timing = datetime.datetime.fromisoformat(event['start']['dateTime'])
                     timetext = f'{timing.day} {months_gen[timing.month]}, {weekdays_long[timing.weekday()]}, {timing.hour:02d}.{timing.minute:02d}'
-                    draw.text(
-                        (x, 470),
-                        timetext,
-                        '#102D69',
-                        ImageFont.truetype("static/HSE_Sans/HSESans-SemiBold.otf", size=128),
-                    )
+                    draw.text((x, 470), timetext, '#102D69', SemiBold128)
                     lines = event['description'].split('\n')
                     for line in lines:
                         if line.find('Где') != -1:
@@ -526,39 +374,14 @@ def draw_plans(period='week', date=None):
                     y_offset = 0
                     if place:
                         y_offset = 130
-                        draw.text(
-                            (x, 644),
-                            'место: ',
-                            '#102D69',
-                            ImageFont.truetype("static/HSE_Sans/HSESans-Regular.otf", size=96),
-                        )
-                        x_offset = draw.textlength('место: ', ImageFont.truetype("static/HSE_Sans/HSESans-Regular.otf", size=96))
-                        draw.text(
-                            (x + x_offset, 644),
-                            place,
-                            '#7081A5',
-                            ImageFont.truetype("static/HSE_Sans/HSESans-Regular.otf", size=96),
-                        )
-                    draw.text(
-                        (x, 644 + y_offset),
-                        'взнос: ',
-                        '#102D69',
-                        ImageFont.truetype("static/HSE_Sans/HSESans-Regular.otf", size=96),
-                    )
-                    x_offset = draw.textlength('взнос: ', ImageFont.truetype("static/HSE_Sans/HSESans-Regular.otf", size=96))
-                    draw.text(
-                        (x + x_offset, 644 + y_offset),
-                        'студенты и школьники - бесплатно',
-                        '#7081A5',
-                        ImageFont.truetype("static/HSE_Sans/HSESans-Regular.otf", size=96),
-                    )
+                        draw.text((x, 644), 'место: ', '#102D69', Regular96)
+                        x_offset = draw.textlength('место: ', Regular96)
+                        draw.text((x + x_offset, 644), place, '#7081A5', Regular96)
+                    draw.text((x, 644 + y_offset), 'взнос: ', '#102D69', Regular96)
+                    x_offset = draw.textlength('взнос: ', Regular96)
+                    draw.text((x + x_offset, 644 + y_offset), 'студенты и школьники - бесплатно', '#7081A5', Regular96)
                     y_offset += 130
-                    draw.text(
-                        (x + x_offset, 644 + y_offset),
-                        'взрослые - 150',
-                        '#7081A5',
-                        ImageFont.truetype("static/HSE_Sans/HSESans-Regular.otf", size=96),
-                    )
+                    draw.text((x + x_offset, 644 + y_offset), 'взрослые - 150', '#7081A5', Regular96)
                     response.add(img)
                     
                 else:
@@ -569,34 +392,14 @@ def draw_plans(period='week', date=None):
                         header = f'{date_start.day}-{date_end.day} {months_gen[date_start.month]}'
                     else:
                         header = f'{date_start.day:02d}.{date_start.month:02d} - {date_end.day:02d}.{date_end.month:02d}'
-                    draw.text(
-                        (x, 96),
-                        header,
-                        '#0F2D69',
-                        ImageFont.truetype("static/HSE_Sans/HSESans-Bold.otf", size=80),
-                    )
-                    x_offset = draw.textlength(header, ImageFont.truetype("static/HSE_Sans/HSESans-Bold.otf", size=80))
-                    draw.text(
-                        (x + x_offset, 96),
-                        ' | клуб',
-                        '#8796B4',
-                        ImageFont.truetype("static/HSE_Sans/HSESans-Regular.otf", size=80),
-                    )
+                    draw.text((x, 96), header, '#0F2D69', Bold80)
+                    x_offset = draw.textlength(header, Bold80)
+                    draw.text((x + x_offset, 96), ' | клуб', '#8796B4', Regular80)
                     draw.rectangle([x, 282, x+30, 312], colormap[event['colorId']])
                     timing = datetime.datetime.fromisoformat(event['start']['dateTime'])
                     timetext = f'{timing.day} {months_gen[timing.month]}, {weekdays_long[timing.weekday()]}, {timing.hour:02d}.{timing.minute:02d}'
-                    draw.text(
-                        (x + 80, 252),
-                        timetext,
-                        '#102D69',
-                        ImageFont.truetype("static/HSE_Sans/HSESans-SemiBold.otf", size=64),
-                    )
-                    draw.text(
-                        (x, 339),
-                        event['summary'],
-                        '#102D69',
-                        ImageFont.truetype("static/HSE_Sans/HSESans-Regular.otf", size=64),
-                    )
+                    draw.text((x + 80, 252), timetext, '#102D69', SemiBold64)
+                    draw.text((x, 339),event['summary'],'#102D69', Regular64)
                     lines = event['description'].split('\n')
                     diff = None
                     fees = None
@@ -627,59 +430,57 @@ def draw_plans(period='week', date=None):
                                 fees['школьники'] = '600 за 6 туров'
                     y_offset = 0
                     if diff:
-                        draw.text(
-                            (x, 426 + y_offset),
-                            'сложность: ',
-                            '#102D69',
-                            ImageFont.truetype("static/HSE_Sans/HSESans-Regular.otf", size=48),
-                        )
-                        x_offset = draw.textlength('сложность: ', ImageFont.truetype("static/HSE_Sans/HSESans-Regular.otf", size=48))
-                        draw.text(
-                            (x + x_offset, 426 + y_offset),
-                            str(diff),
-                            '#7081A5',
-                            ImageFont.truetype("static/HSE_Sans/HSESans-Regular.otf", size=48),
-                        )
+                        draw.text((x, 426 + y_offset), 'сложность: ', '#102D69', Regular48)
+                        x_offset = draw.textlength('сложность: ', Regular48)
+                        draw.text((x + x_offset, 426 + y_offset), str(diff), '#7081A5', Regular48)
                         y_offset += 65
                     if place:
-                        draw.text(
-                            (x, 426 + y_offset),
-                            'место: ',
-                            '#102D69',
-                            ImageFont.truetype("static/HSE_Sans/HSESans-Regular.otf", size=48),
-                        )
-                        x_offset = draw.textlength('место: ', ImageFont.truetype("static/HSE_Sans/HSESans-Regular.otf", size=48))
-                        draw.text(
-                            (x + x_offset, 426 + y_offset),
-                            place,
-                            '#7081A5',
-                            ImageFont.truetype("static/HSE_Sans/HSESans-Regular.otf", size=48),
-                        )
+                        draw.text( (x, 426 + y_offset), 'место: ', '#102D69', Regular48)
+                        x_offset = draw.textlength('место: ', Regular48)
+                        draw.text((x + x_offset, 426 + y_offset), place, '#7081A5', Regular48)
                         y_offset += 65
                     if fees:
-                        draw.text(
-                            (x, 426 + y_offset),
-                            'взнос: ',
-                            '#102D69',
-                            ImageFont.truetype("static/HSE_Sans/HSESans-Regular.otf", size=48),
-                        )
-                        x_offset = draw.textlength('взнос: ', ImageFont.truetype("static/HSE_Sans/HSESans-Regular.otf", size=48))
+                        draw.text((x, 426 + y_offset), 'взнос: ', '#102D69', Regular48)
+                        x_offset = draw.textlength('взнос: ', Regular48)
                         if fees['все команды']:
-                            draw.text(
-                                (x + x_offset, 426 + y_offset),
-                                'все команды' + ' - ' + fees['все команды'],
-                                '#7081A5',
-                                ImageFont.truetype("static/HSE_Sans/HSESans-Regular.otf", size=48),
-                            )
+                            draw.text((x + x_offset, 426 + y_offset), 'все команды' + ' - ' + fees['все команды'], '#7081A5', Regular48)
                         else:
                             for key, value in fees.items():
                                 if value:
-                                    draw.text(
-                                        (x + x_offset, 426 + y_offset),
-                                        key + ' - ' + value,
-                                        '#7081A5',
-                                        ImageFont.truetype("static/HSE_Sans/HSESans-Regular.otf", size=48),
-                                    )
+                                    draw.text((x + x_offset, 426 + y_offset), key + ' - ' + value, '#7081A5', Regular48)
                                     y_offset += 65
                     response.add(img)
     return response
+    
+    
+def poll_plans(period='week', date=None):
+    question = 'default question'
+    options = []
+    try:
+        date_start, date_end = parse_dates(period, date)
+    except:
+        question = 'Проблемы с распознаванием аргументов :('
+        options.append(telebot.types.InputPollOption('Образец:'))
+        options.append(telebot.types.InputPollOption('/poll week 20250326'))
+        return question, options, True
+
+    events = get_list(date_start, date_end)
+    if not events['items']:
+        question = 'Мероприятий не найдено.'
+        options.append(telebot.types.InputPollOption('Ура!'))
+        options.append(telebot.types.InputPollOption('Не ура :('))
+        return question, options, True
+    
+    question = 'Готов сыграть:'    
+    exclude = ['7', '8']
+    for i, event in enumerate(events['items']):
+        if len(options) == 9:
+            question = '(поместились не все мероприятия, попробуйте выбрать период поменьше)\n' + question
+            break
+        if event['colorId'] not in exclude:
+            timing = datetime.datetime.fromisoformat(event['start']['dateTime'])
+            option = f'{event['summary']} ({weekdays_long[timing.weekday()]})'
+            options.append(telebot.types.InputPollOption(option))
+    options.append(telebot.types.InputPollOption('тык, если проголосовал'))
+       
+    return question, options, False

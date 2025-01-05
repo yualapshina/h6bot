@@ -1,4 +1,4 @@
-import calendar_api
+import timetable
 import equirhythmic
 import telebot
 from telebot import types
@@ -13,8 +13,9 @@ bot=telebot.TeleBot(token, threaded=False)
 
 bot.set_my_commands([
     telebot.types.BotCommand(command='start', description='приветствие'),
-    telebot.types.BotCommand(command='print', description='текстовое расписание на текущую неделю'),
-    telebot.types.BotCommand(command='draw', description='афиши на текущую неделю'),
+    telebot.types.BotCommand(command='list', description='текстовое расписание на текущую неделю'),
+    telebot.types.BotCommand(command='posters', description='афиши на текущую неделю'),
+    telebot.types.BotCommand(command='poll', description='опрос участия на текущую неделю'),
     telebot.types.BotCommand(command='triggers', description='список скрытых талантов'),
 ])
 bot.set_chat_menu_button(menu_button=types.MenuButtonCommands('commands'))
@@ -29,20 +30,33 @@ def command_triggers(message):
     text = 'Список текущих скрытых талантов:\n> реагирую на эквиритмики "обручального кольца"'
     bot.send_message(message.chat.id, text)
 
-@bot.message_handler(commands=['print'])
-def command_print(message):
+@bot.message_handler(commands=['list'])
+def command_list(message):
     args = message.text.split()
     old_stdout = sys.stdout
-    text = calendar_api.print_plans(args[1] if len(args)>1 else 'week', args[2] if len(args)>2 else None)
+    text = timetable.print_plans(args[1] if len(args)>1 else 'week', args[2] if len(args)>2 else None)
     sys.stdout = old_stdout
     bot.send_message(message.chat.id, text)
     
-@bot.message_handler(commands=['draw'])
-def command_draw(message):
+@bot.message_handler(commands=['posters'])
+def command_posters(message):
     args = message.text.split()
-    response = calendar_api.draw_plans(args[1] if len(args)>1 else 'week', args[2] if len(args)>2 else None)
+    response = timetable.draw_plans(args[1] if len(args)>1 else 'week', args[2] if len(args)>2 else None)
     bot.send_media_group(message.chat.id, response.prepare())
     response.clear()
+    
+@bot.message_handler(commands=['poll'])
+def command_poll(message):
+    args = message.text.split()
+    question, options, is_closed = timetable.poll_plans(args[1] if len(args)>1 else 'week', args[2] if len(args)>2 else None)
+    bot.send_poll(
+        message.chat.id, 
+        question, 
+        options, 
+        is_anonymous=False, 
+        allows_multiple_answers=True, 
+        is_closed=is_closed
+    )
 
 def react_ring(messages):
     for message in messages:
