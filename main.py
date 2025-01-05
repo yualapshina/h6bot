@@ -1,5 +1,5 @@
 import timetable
-import equirhythmic
+import wordplay
 import telebot
 from telebot import types
 import datetime
@@ -31,7 +31,7 @@ def command_start(message):
 
 @bot.message_handler(commands=['triggers'])
 def command_triggers(message):
-    text = 'Список текущих скрытых талантов:\n> реагирую на эквиритмики "обручального кольца"'
+    text = 'Список текущих скрытых талантов:\n> реагирую на эквиритмики "обручального кольца"\n> реагирую на хайку'
     bot.send_message(message.chat.id, text)
 
 @bot.message_handler(commands=['list'])
@@ -112,6 +112,10 @@ def command_plan(message):
         if int(key) < int(expiry_date):
             old_plans.append(key)
     for old in old_plans:
+        try:
+            bot.unpin_chat_message(message.chat.id, current_plans[chat][old]['list'])
+        except:
+            pass
         current_plans[chat].pop(old)
     with open('current_plans.json', 'w') as f:
         json.dump(current_plans, f)
@@ -171,9 +175,14 @@ def command_update(message):
 
 def react_ring(messages):
     for message in messages:
+        if not message.text:
+            return
         old_stdout = sys.stdout
-        if equirhythmic.check_phrase(message.text):
+        if wordplay.check_equi(message.text):
             bot.set_message_reaction(message.chat.id, message.id, [types.ReactionTypeEmoji('⚡')], is_big=False)
+        haiku = wordplay.find_haiku(message.text)
+        if haiku:
+            bot.send_message(message.chat.id, haiku, reply_parameters=telebot.types.ReplyParameters(message.id))
         sys.stdout = old_stdout
 
 

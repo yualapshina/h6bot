@@ -41,7 +41,7 @@ def generate_start_list(words, example):
     return start_list
 
 
-def find_similar(text, example='очень я тебя люблю'):  
+def find_equirhythmics(text, example='очень я тебя люблю'):  
     result = StringIO()
     sys.stdout = result  
     
@@ -61,11 +61,44 @@ def find_similar(text, example='очень я тебя люблю'):
     return result.getvalue()
     
     
-def check_phrase(text):
-    if not text:
-        text = ''
+def check_equi(text=''):
     text = ' '.join(text.lower().replace('\n', ' ').split())
-    result = find_similar(text)
+    result = find_equirhythmics(text)
     return '> ' + text + '\n' == result
     
+
+def find_haiku(text=''):
+    result = StringIO(None)
+    sys.stdout = result
     
+    stress_rnn = StressRNN()
+    text = text.lower().replace('\n', ' ')
+    words = text.split()
+    code_words = list(map(lambda x: encode(stress_rnn.put_stress(x)), words))
+    lens = list(map(len, code_words))
+    if sum(lens) != 17:
+        return result.getvalue()
+    start_sum = 0
+    first_sep = 0
+    for i in range(len(lens)):
+        start_sum += lens[i]
+        if start_sum > 5:
+            return result.getvalue()
+        if start_sum == 5:
+            first_sep = i + 1
+            break
+    middle_sum = 0
+    second_sep = 0
+    for i in range(first_sep, len(lens)):
+        middle_sum += lens[i]
+        if middle_sum > 7:
+            return result.getvalue()
+        if middle_sum == 7:
+            second_sep = i + 1
+            break
+    print('🌸')
+    print(' '.join(words[:first_sep]))
+    print(' '.join(words[first_sep:second_sep]))
+    print(' '.join(words[second_sep:]))
+    print('🌸')
+    return result.getvalue()
