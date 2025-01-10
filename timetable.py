@@ -6,9 +6,13 @@ import telebot
 import datetime
 from dateutil.relativedelta import relativedelta
 from PIL import Image, ImageDraw, ImageFont
-
-from oauth2client import client
+from httplib2 import Http
+from oauth2client import client, file, tools
+from apiclient import discovery
 from googleapiclient import sample_tools
+from dotenv import load_dotenv, find_dotenv
+
+load_dotenv(find_dotenv())
 
 weekdays_short = {
     0: 'пн', 1: 'вт', 2: 'ср', 3: 'чт', 4: 'пт', 5: 'сб', 6: 'вск',
@@ -484,3 +488,90 @@ def poll_plans(period='week', date=None):
     options.append(telebot.types.InputPollOption('тык, если проголосовал'))
        
     return question, options, False
+    
+    
+def form_plans(period='week', date=None):
+    result = StringIO()
+    sys.stdout = result
+    
+    try:
+        date_start, date_end = parse_dates(period, date)
+    except:
+        print('Проблемы с распознаванием аргументов :(\nОбразец: /forms week 20250326')
+        return result.getvalue() 
+
+    if period == 'month':
+        print(f'Формы на {months_nom[date_start.month]}:')
+    if period == 'week':
+        print(f'Формы с {date_start.day:02d}.{date_start.month:02d} по {date_end.day:02d}.{date_end.month:02d}:')
+    if period == 'day':
+        print(f'Формы на {date_start.day} {months_gen[date_start.month]}:')
+
+    events = get_list(date_start, date_end)
+    if not events['items']:
+        print('Мероприятий не найдено. Ура! Или не ура?')
+        return result.getvalue()
+    
+    SCOPES = [
+        "https://www.googleapis.com/auth/forms.body",
+        "https://www.googleapis.com/auth/drive.file"
+    ]
+    DISCOVERY_DOC = "https://forms.googleapis.com/$discovery/rest?version=v1"
+    store = file.Storage("token.json")
+    creds = store.get()
+    if not creds or creds.invalid:
+        flow = client.flow_from_clientsecrets("client_secrets.json", SCOPES)
+        creds = tools.run_flow(flow, store)
+        with open('token.json', 'w') as token:
+            token.write(creds.to_json())
+    forms_service = discovery.build(
+        "forms",
+        "v1",
+        http=creds.authorize(Http()),
+        discoveryServiceUrl=DISCOVERY_DOC,
+        static_discovery=False,
+    )
+    drive_service = discovery.build("drive", "v3", credentials=creds)
+    
+    for event in events['items']:
+        description = 'descriptionnnnnnnn'
+        
+        newform = {
+            'info': {
+                'title': event['summary'],
+                'documentTitle': event['summary'],
+            },
+        }        
+        update = {"requests": [
+            {
+            "updateFormInfo": {
+                "info": {"description": (description)},
+                "updateMask": "description",
+            }},{
+            "createItem": {
+                "item": {
+                    "title": "test item",
+                    "description": "lmao",
+                    "questionItem": {"question": {
+                        "required": True,
+                        "textQuestion": {}
+                    }},
+                },
+                "location": {"index": 0},
+            }}
+        ]}
+        
+        form = forms_service.forms().create(body=newform).execute()
+        forms_service.forms().batchUpdate(formId=form['formId'], body=update).execute()
+        formfile = drive_service.files().get(fileId=form['formId'], fields='parents').execute()
+        previous_parents = ','.join(formfile.get('parents'))
+        drive_service.files().update(
+            fileId=form['formId'],
+            addParents=os.environ.get("FOLDER"),
+            removeParents=previous_parents,
+            fields='id, parents',
+        ).execute()
+        
+        print()
+        print(form['responderUri'])
+    return result.getvalue()   

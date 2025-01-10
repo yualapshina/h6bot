@@ -1,4 +1,5 @@
 .env
 calendar.dat
+token.json
 client_secrets.json
 __pycache__

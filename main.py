@@ -20,6 +20,7 @@ bot.set_my_commands([
     telebot.types.BotCommand(command='list', description='текстовое расписание'),
     telebot.types.BotCommand(command='posters', description='афиши'),
     telebot.types.BotCommand(command='poll', description='опрос участия'),
+    telebot.types.BotCommand(command='forms', description='формы'),
     telebot.types.BotCommand(command='triggers', description='список скрытых талантов'),
 ])
 bot.set_chat_menu_button(menu_button=types.MenuButtonCommands('commands'))
@@ -61,6 +62,14 @@ def command_poll(message):
         allows_multiple_answers=True, 
         is_closed=is_closed
     )
+    
+@bot.message_handler(commands=['forms'])
+def command_forms(message):
+    args = message.text.split()
+    old_stdout = sys.stdout
+    text = timetable.form_plans(args[1] if len(args)>1 else 'week', args[2] if len(args)>2 else None)
+    sys.stdout = old_stdout
+    bot.send_message(message.chat.id, text)
 
 @bot.message_handler(commands=['plan'])
 def command_plan(message):

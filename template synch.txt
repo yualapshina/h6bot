@@ -1,0 +1,244 @@
+{
+  "formId": "1A7U4ZB4ISyzzp_pmOXdPEsticWJlnJI1x32EmRju76Y",
+  "info": {
+    "title": "название синхрона",
+    "description": "Дата проведения: дата, день недели\nВремя начала: время - сбор, время - первый вопрос\nМесто проведения:  место\nСложность: сложность\n\nОрганизатор: Клуб Интеллектуальных Игр ВШЭ-НН (https://vk.com/chgk_hsenn)\n\nОбратите внимание! На оформление пропусков в вуз необходимо время, поэтому мы сможем допустить только тех игроков не из ВШЭ, которые зарегистрируются не позже 10 утра даты дедлайна. Спасибо за понимание!",
+    "documentTitle": "h6bot template synch"
+  },
+  "settings": {},
+  "revisionId": "00000029",
+  "responderUri": "https://docs.google.com/forms/d/e/1FAIpQLSdo148KJFRQLzjX8nBkTZK8CrLITsaaVHG8qvuTuoDyGT5Dow/viewform",
+  "items": [
+    {
+      "itemId": "7482d82f",
+      "title": "Кто вы?",
+      "questionItem": {
+        "question": {
+          "questionId": "33278b35",
+          "required": true,
+          "choiceQuestion": {
+            "type": "RADIO",
+            "options": [
+              {
+                "value": "Команда",
+                "goToSectionId": "66405ca1"
+              },
+              {
+                "value": "Игрок в поисках команды",
+                "goToSectionId": "64b8b537"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "itemId": "66405ca1",
+      "pageBreakItem": {},
+      "title": "Команда",
+      "description": "Заполните, пожалуйста, информацию о вашей команде, чтобы мы подготовили всё должным образом."
+    },
+    {
+      "itemId": "0ec6bf53",
+      "title": "Название команды",
+      "questionItem": {
+        "question": {
+          "questionId": "21c98b35",
+          "required": true,
+          "textQuestion": {}
+        }
+      }
+    },
+    {
+      "itemId": "22853d26",
+      "title": "ID команды на сайте рейтинга (если нет или не знаете, о чём речь, поставьте 0)",
+      "questionItem": {
+        "question": {
+          "questionId": "52d49912",
+          "required": true,
+          "textQuestion": {}
+        }
+      }
+    },
+    {
+      "itemId": "168af7d2",
+      "title": "Зачёт, в который входит ваша команда",
+      "questionItem": {
+        "question": {
+          "questionId": "2b024385",
+          "required": true,
+          "choiceQuestion": {
+            "type": "RADIO",
+            "options": [
+              {
+                "value": "Школьная команда - бесплатно"
+              },
+              {
+                "value": "Студенческая (все игроки родились не раньше 01.09.2001) команда - стоимость"
+              },
+              {
+                "value": "Любая другая команда - стоимость"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "itemId": "62faf556",
+      "title": "ФИО капитана",
+      "questionItem": {
+        "question": {
+          "questionId": "4cd68ad9",
+          "required": true,
+          "textQuestion": {}
+        }
+      }
+    },
+    {
+      "itemId": "7479d1ca",
+      "title": "ВК или ТГ капитана для связи",
+      "questionItem": {
+        "question": {
+          "questionId": "376bcb13",
+          "required": true,
+          "textQuestion": {}
+        }
+      }
+    },
+    {
+      "itemId": "352c2652",
+      "title": "Сколько игроков планируется?",
+      "questionItem": {
+        "question": {
+          "questionId": "4fa933ba",
+          "required": true,
+          "scaleQuestion": {
+            "low": 1,
+            "high": 6
+          }
+        }
+      }
+    },
+    {
+      "itemId": "0afd071f",
+      "title": "Сколько легионеров (свободных игроков) вы ищете или готовы принять?",
+      "questionItem": {
+        "question": {
+          "questionId": "19db54d2",
+          "required": true,
+          "scaleQuestion": {
+            "high": 5
+          }
+        }
+      }
+    },
+    {
+      "itemId": "3a63da9c",
+      "title": "ФИО всех игроков без пропуска в ВШЭ",
+      "questionItem": {
+        "question": {
+          "questionId": "09079d1c",
+          "textQuestion": {
+            "paragraph": true
+          }
+        }
+      }
+    },
+    {
+      "itemId": "45524ce4",
+      "title": "Любые вопросы и сообщения для оргкомитета",
+      "questionItem": {
+        "question": {
+          "questionId": "6a8cbed7",
+          "textQuestion": {}
+        }
+      }
+    },
+    {
+      "itemId": "64b8b537",
+      "pageBreakItem": {},
+      "title": "Легионер",
+      "description": "Заполните, пожалуйста, информацию о себе, чтобы мы подобрали для вас лучшую команду."
+    },
+    {
+      "itemId": "78f16fa7",
+      "title": "ФИО",
+      "questionItem": {
+        "question": {
+          "questionId": "0a3973e7",
+          "required": true,
+          "textQuestion": {}
+        }
+      }
+    },
+    {
+      "itemId": "2ae965f3",
+      "title": "ВК или ТГ для связи",
+      "questionItem": {
+        "question": {
+          "questionId": "4a479f0f",
+          "required": true,
+          "textQuestion": {}
+        }
+      }
+    },
+    {
+      "itemId": "3f4dcfbd",
+      "title": "Дата рождения",
+      "questionItem": {
+        "question": {
+          "questionId": "5c993d28",
+          "required": true,
+          "dateQuestion": {
+            "includeYear": true
+          }
+        }
+      }
+    },
+    {
+      "itemId": "5664ea65",
+      "title": "Занятость",
+      "questionItem": {
+        "question": {
+          "questionId": "2090b9b4",
+          "required": true,
+          "choiceQuestion": {
+            "type": "RADIO",
+            "options": [
+              {
+                "value": "Обучаюсь в школе"
+              },
+              {
+                "value": "Обучаюсь в вузе (бакалавриат, магистратура или аспирантура)"
+              },
+              {
+                "value": "Другое"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "itemId": "47687194",
+      "title": "Если вы студент вуза, то укажите, пожалуйста, его название",
+      "questionItem": {
+        "question": {
+          "questionId": "510fb781",
+          "textQuestion": {}
+        }
+      }
+    },
+    {
+      "itemId": "35091fe4",
+      "title": "Любые вопросы и сообщения для оргкомитета",
+      "questionItem": {
+        "question": {
+          "questionId": "57955c8f",
+          "textQuestion": {}
+        }
+      }
+    }
+  ]
+}
