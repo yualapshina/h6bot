@@ -17,22 +17,22 @@ bot.set_my_commands([
     telebot.types.BotCommand(command='start', description='приветствие'),
     telebot.types.BotCommand(command='plan', description='добавить материалы на неделю'),
     telebot.types.BotCommand(command='update', description='обновить материалы на неделю'),
-    telebot.types.BotCommand(command='list', description='текстовое расписание'),
-    telebot.types.BotCommand(command='posters', description='афиши'),
-    telebot.types.BotCommand(command='poll', description='опрос участия'),
-    telebot.types.BotCommand(command='forms', description='формы'),
     telebot.types.BotCommand(command='triggers', description='список скрытых талантов'),
+    telebot.types.BotCommand(command='list', description='(дебаг) текстовое расписание'),
+    telebot.types.BotCommand(command='posters', description='(дебаг) афиши'),
+    telebot.types.BotCommand(command='poll', description='(дебаг) опрос участия'),
+    telebot.types.BotCommand(command='forms', description='(дебаг) гугл-формы'),
 ])
 bot.set_chat_menu_button(menu_button=types.MenuButtonCommands('commands'))
 
 @bot.message_handler(commands=['start'])
 def command_start(message):
-    text = 'Привет! Я ВШЭстерёнка (⁠◕⁠ᴗ⁠◕⁠)\n\nСуществую, чтобы автоматизировать однообразные задачи и локальные шутки (идеи активно принимаются).\nСписок текущих команд можно посмотреть по кнопке.'
+    text = 'Привет! Я ВШЭстерёнка (⁠◕⁠ᴗ⁠◕⁠)\nНижегородские трамваи постепенно роботизируются, пристегнитесь покрепче.\n\nСписок текущих команд можно посмотреть по кнопке.'
     bot.send_message(message.chat.id, text)
 
 @bot.message_handler(commands=['triggers'])
 def command_triggers(message):
-    text = 'Список текущих скрытых талантов:\n> реагирую на эквиритмики "обручального кольца"\n> реагирую на хайку'
+    text = 'Список текущих скрытых талантов:\n⚡ реагирую на непростые\n🌸 реагирую на хайку'
     bot.send_message(message.chat.id, text)
 
 @bot.message_handler(commands=['list'])
@@ -65,11 +65,12 @@ def command_poll(message):
     
 @bot.message_handler(commands=['forms'])
 def command_forms(message):
-    args = message.text.split()
+    args = message.text.split()    
+    placeholder = bot.send_message(message.chat.id, 'Формы сейчас будут 👉👈')
     old_stdout = sys.stdout
-    text = timetable.form_plans(args[1] if len(args)>1 else 'week', args[2] if len(args)>2 else None)
+    text, form_ids = timetable.form_plans(args[1] if len(args)>1 else 'week', args[2] if len(args)>2 else None)
     sys.stdout = old_stdout
-    bot.send_message(message.chat.id, text)
+    bot.edit_message_text(text, message.chat.id, placeholder.message_id)
 
 @bot.message_handler(commands=['plan'])
 def command_plan(message):
@@ -115,6 +116,14 @@ def command_plan(message):
     sent_posters = bot.send_media_group(message.chat.id, response.prepare())
     current_plans[chat][date]['posters'] = sent_posters[0].message_id 
     response.clear()
+    
+    sent_forms = bot.send_message(message.chat.id, 'Формы сейчас будут 👉👈')
+    old_stdout = sys.stdout
+    text, form_ids = timetable.form_plans(period, date)
+    sys.stdout = old_stdout
+    bot.edit_message_text(text, message.chat.id, sent_forms.message_id)
+    current_plans[chat][date]['forms'] = sent_forms.message_id 
+    current_plans[chat][date]['form_ids'] = form_ids
     
     old_plans = []
     for key in current_plans[chat]:
@@ -178,6 +187,19 @@ def command_update(message):
     sent_posters = bot.send_media_group(message.chat.id, response.prepare())
     current_plans[chat][date]['posters'] = sent_posters[0].message_id 
     response.clear()
+    
+    if 'global' in args:
+        sent_forms = bot.send_message(message.chat.id, 'Формы сейчас будут 👉👈')
+        old_stdout = sys.stdout
+        text, form_ids = timetable.form_plans(period, date)
+        sys.stdout = old_stdout
+        bot.edit_message_text(text, message.chat.id, sent_forms.message_id)
+        current_plans[chat][date]['forms'] = sent_forms.message_id 
+        current_plans[chat][date]['form_ids'] = form_ids
+    else:
+        timetable.update_forms(current_plans[chat][date]['form_ids'])
+        bot.send_message(message.chat.id, 'Обновлено (на всякий случай, как и афиши)', 
+                reply_parameters=telebot.types.ReplyParameters(current_plans[chat][date]['forms']))
     
     with open('current_plans.json', 'w') as f:
         json.dump(current_plans, f)

@@ -494,11 +494,12 @@ def form_plans(period='week', date=None):
     result = StringIO()
     sys.stdout = result
     
+    result_forms = []
     try:
         date_start, date_end = parse_dates(period, date)
     except:
         print('Проблемы с распознаванием аргументов :(\nОбразец: /forms week 20250326')
-        return result.getvalue() 
+        return result.getvalue(), result_forms
 
     if period == 'month':
         print(f'Формы на {months_nom[date_start.month]}:')
@@ -510,7 +511,7 @@ def form_plans(period='week', date=None):
     events = get_list(date_start, date_end)
     if not events['items']:
         print('Мероприятий не найдено. Ура! Или не ура?')
-        return result.getvalue()
+        return result.getvalue(), result_forms
     
     SCOPES = [
         "https://www.googleapis.com/auth/forms.body",
@@ -534,35 +535,305 @@ def form_plans(period='week', date=None):
     drive_service = discovery.build("drive", "v3", credentials=creds)
     
     for event in events['items']:
-        description = 'descriptionnnnnnnn'
+        if event['summary'].find('Лига вузов') != -1 \
+        or event['summary'].find('Своя игра') != -1 \
+        or event['colorId'] == '8':
+            continue
         
         newform = {
             'info': {
                 'title': event['summary'],
-                'documentTitle': event['summary'],
+                'documentTitle': f'{event['summary']} ({datetime.datetime.now().strftime('%Y%m%d %H:%M:%S')})'
             },
         }        
-        update = {"requests": [
+        body_update = {'requests': [
             {
-            "updateFormInfo": {
-                "info": {"description": (description)},
-                "updateMask": "description",
+            'createItem': {
+                'item': {
+                    'title': 'Команда',
+                    'description': 'Заполните, пожалуйста, информацию о вашей команде, чтобы мы подготовили всё должным образом.',
+                    'pageBreakItem': {}
+                },
+                'location': {'index': 0},
             }},{
-            "createItem": {
-                "item": {
-                    "title": "test item",
-                    "description": "lmao",
-                    "questionItem": {"question": {
-                        "required": True,
-                        "textQuestion": {}
+            'createItem': {
+                'item': {
+                    'title': 'Название команды',
+                    'questionItem': {'question': {
+                        'required': True,
+                        'textQuestion': {}
                     }},
                 },
-                "location": {"index": 0},
+                'location': {'index': 1},
+            }},{
+            'createItem': {
+                'item': {
+                    'title': 'ID команды на сайте рейтинга (если нет или не знаете, о чём речь, поставьте 0)',
+                    'questionItem': {'question': {
+                        'required': True,
+                        'textQuestion': {}
+                    }},
+                },
+                'location': {'index': 2},
+            }},{
+            'createItem': {
+                'item': {
+                    'title': 'ФИО капитана',
+                    'questionItem': {'question': {
+                        'required': True,
+                        'textQuestion': {}
+                    }},
+                },
+                'location': {'index': 3},
+            }},{
+            'createItem': {
+                'item': {
+                    'title': 'ВК или ТГ капитана для связи',
+                    'questionItem': {'question': {
+                        'required': True,
+                        'textQuestion': {}
+                    }},
+                },
+                'location': {'index': 4},
+            }},{
+            'createItem': {
+                'item': {
+                    'title': 'Сколько игроков планируется?',
+                    'questionItem': {'question': {
+                        'required': True,
+                        'scaleQuestion': {
+                            'low': 1,
+                            'high': 6
+                        }
+                    }},
+                },
+                'location': {'index': 5},
+            }},{
+            'createItem': {
+                'item': {
+                    'title': 'Сколько легионеров (свободных игроков) вы ищете или готовы принять?',
+                    'questionItem': {'question': {
+                        'required': True,
+                        'scaleQuestion': {
+                            'high': 5
+                        }
+                    }},
+                },
+                'location': {'index': 6},
+            }},{
+            'createItem': {
+                'item': {
+                    'title': 'ФИО всех игроков без пропуска в ВШЭ',
+                    'questionItem': {'question': {
+                        'textQuestion': {
+                            'paragraph': True
+                        }
+                    }},
+                },
+                'location': {'index': 7},
+            }},{
+            'createItem': {
+                'item': {
+                    'title': 'Любые вопросы и сообщения для оргкомитета',
+                    'questionItem': {'question': {
+                        'textQuestion': {}
+                    }},
+                },
+                'location': {'index': 8},
+            }},{
+            'createItem': {
+                'item': {
+                    'title': 'Легионер',
+                    'description': 'Заполните, пожалуйста, информацию о себе, чтобы мы подобрали для вас лучшую команду.',
+                    'pageBreakItem': {}
+                },
+                'location': {'index': 9},
+            }},{
+            'createItem': {
+                'item': {
+                    'title': 'ФИО',
+                    'questionItem': {'question': {
+                        'required': True,
+                        'textQuestion': {}
+                    }},
+                },
+                'location': {'index': 10},
+            }},{
+            'createItem': {
+                'item': {
+                    'title': 'ВК или ТГ для связи',
+                    'questionItem': {'question': {
+                        'required': True,
+                        'textQuestion': {}
+                    }},
+                },
+                'location': {'index': 11},
+            }},{
+            'createItem': {
+                'item': {
+                    'title': 'Дата рождения',
+                    'questionItem': {'question': {
+                        'required': True,
+                        'dateQuestion': {
+                            'includeYear': True
+                        }
+                    }},
+                },
+                'location': {'index': 12},
+            }},{
+            'createItem': {
+                'item': {
+                    'title': 'Занятость',
+                    'questionItem': {'question': {
+                        'required': True,
+                        'choiceQuestion': {
+                            'type': 'RADIO',
+                            'options': [{
+                                'value': 'Обучаюсь в школе'
+                                },{
+                                'value': 'Обучаюсь в вузе (бакалавриат, магистратура или аспирантура)'
+                                },{
+                                'value': 'Другое'
+                                }
+                            ]
+                        }
+                    }},
+                },
+                'location': {'index': 13},
+            }},{
+            'createItem': {
+                'item': {
+                    'title': 'Если вы студент вуза, то укажите, пожалуйста, его название',
+                    'questionItem': {'question': {
+                        'textQuestion': {}
+                    }},
+                },
+                'location': {'index': 14},
+            }},{
+            'createItem': {
+                'item': {
+                    'title': 'Любые вопросы и сообщения для оргкомитета',
+                    'questionItem': {'question': {
+                        'textQuestion': {}
+                    }},
+                },
+                'location': {'index': 15},
             }}
         ]}
         
         form = forms_service.forms().create(body=newform).execute()
-        forms_service.forms().batchUpdate(formId=form['formId'], body=update).execute()
+        ids = forms_service.forms().batchUpdate(formId=form['formId'], body=body_update).execute()['replies']
+        team_section = ids[0]['createItem']['itemId']
+        player_section = ids[9]['createItem']['itemId']
+        
+        timing = datetime.datetime.fromisoformat(event['start']['dateTime'])
+        timing_offset = timing - datetime.timedelta(minutes=15)
+        if timing.weekday():
+            timing_deadline = timing - datetime.timedelta(days=2)
+        else:
+            timing_deadline = timing - datetime.timedelta(days=3)
+        lines = event['description'].split('\n')
+        place = 'ул. Костина, 2б'
+        diff = None
+        fees = None
+        for line in lines:
+            if line.find('Сложность') != -1:
+                diff = float(line[10:].replace(' ', ''))
+            if line.find('Где') != -1:
+                if line.find('TBA') == -1 and line.find('ТВА') == -1:
+                    place = line[5:]
+            if line.find('Взнос') != -1:
+                fee_lines = line[7:].split(',')
+                fees = {
+                    'Школьная команда': None, 
+                    'Студенческая (все игроки родились не раньше 01.09.2001) команда': None, 
+                    'Любая другая команда': None, 
+                    'Любая команда': None
+                }
+                for fl in fee_lines:
+                    if fl.find('всех') != -1:
+                        fees[list(fees.keys())[3]] = fl.split()[0]
+                    if fl.find('взрос') != -1:
+                        fees[list(fees.keys())[2]] = fl.split()[0]
+                    if fl.find('студен') != -1:
+                        fees[list(fees.keys())[1]] = fl.split()[0]
+                    if fl.find('школьн') != -1:
+                        fees[list(fees.keys())[0]] = fl.split()[0]
+                empty = []
+                fees_as_request = []
+                for key, value in fees.items():
+                    if value is None:
+                        empty.append(key)
+                        continue
+                    if value == '0':
+                        fees[key] = 'бесплатно'
+                    if fees[key] != 'бесплатно':
+                        fees[key] += 'р'
+                    if event['summary'].find('Школьная лига') != -1:
+                        fees[list(fees.keys())[0]] = '600 за 6 туров'
+                for key in empty:
+                    fees.pop(key)
+                for key, value in fees.items():
+                    fees_as_request.append({'value': f'{key} - {value}'})
+                
+        description = ''
+        description += f'Дата проведения: {timing.day} {months_gen[timing.month]}, {weekdays_long[timing.weekday()]}\n'
+        description += f'Время начала: {timing_offset.hour:02d}:{timing_offset.minute:02d} - сбор, {timing.hour:02d}:{timing.minute:02d} - первый вопрос\n'
+        description += f'Место проведения: {place}\n'
+        if diff:
+            description += f'Сложность: {diff}\n'
+        description += '\nОрганизатор: Клуб Интеллектуальных Игр ВШЭ-НН (https://vk.com/chgk_hsenn)\n\n'
+        description += f'Обратите внимание! На оформление пропусков в вуз необходимо время, поэтому мы сможем допустить только тех игроков не из ВШЭ, которые зарегистрируются не позже 10 утра {timing_deadline.day} {months_gen[timing_deadline.month]}. Спасибо за понимание!'
+        
+        header_update = {'requests': [
+            {
+            'updateFormInfo': {
+                'info': {'description': (description)},
+                'updateMask': 'description',
+            }},{
+            'createItem': {
+                'item': {
+                    'title': 'Кто вы?',
+                    'questionItem': {'question': {
+                        'required': True,
+                        'choiceQuestion': {
+                            'type': 'RADIO',
+                            'options': [{
+                                'value': 'Команда',
+                                'goToSectionId': team_section
+                                },{
+                                'value': 'Игрок в поисках команды',
+                                'goToSectionId': player_section
+                                }
+                            ]
+                        }
+                    }},
+                },
+                'location': {'index': 0},
+            }}
+        ]}
+        
+        forms_service.forms().batchUpdate(formId=form['formId'], body=header_update).execute() 
+
+        if fees:
+            fees_update = {'requests': [
+                {
+                'createItem': {
+                    'item': {
+                        'title': 'Зачёт, в который входит ваша команда',
+                        'questionItem': {'question': {
+                            'required': True,
+                            'choiceQuestion': {
+                                'type': 'RADIO',
+                                'options': fees_as_request
+                            }
+                        }},
+                    },
+                    'location': {'index': 4}
+                }}
+            ]}
+            forms_service.forms().batchUpdate(formId=form['formId'], body=fees_update).execute() 
+        
         formfile = drive_service.files().get(fileId=form['formId'], fields='parents').execute()
         previous_parents = ','.join(formfile.get('parents'))
         drive_service.files().update(
@@ -573,5 +844,130 @@ def form_plans(period='week', date=None):
         ).execute()
         
         print()
-        print(form['responderUri'])
-    return result.getvalue()   
+        print(event['summary'] + ': ' + form['responderUri'] + '\n')
+        result_forms.append({'event': event['id'], 'form': form['formId']})
+    if not len(result_forms):
+        print('(не нужны ни на одно мероприятие)')
+    return result.getvalue(), result_forms 
+   
+   
+def update_forms(form_ids):
+    SCOPES = [
+        "https://www.googleapis.com/auth/forms.body"
+    ]
+    DISCOVERY_DOC = "https://forms.googleapis.com/$discovery/rest?version=v1"
+    store = file.Storage("token.json")
+    creds = store.get()
+    if not creds or creds.invalid:
+        flow = client.flow_from_clientsecrets("client_secrets.json", SCOPES)
+        creds = tools.run_flow(flow, store)
+        with open('token.json', 'w') as token:
+            token.write(creds.to_json())
+    forms_service = discovery.build(
+        "forms",
+        "v1",
+        http=creds.authorize(Http()),
+        discoveryServiceUrl=DISCOVERY_DOC,
+        static_discovery=False,
+    )
+    calendar_service, flags = sample_tools.init(
+        sys.argv,
+        "calendar",
+        "v3",
+        __doc__,
+        __file__,
+        scope="https://www.googleapis.com/auth/calendar.readonly",
+    )
+    calendar_id = '76dbb37f954769a5b2629eeb1bc90db8c1b87cbc8d1573c1276fff5ead6c7b5a@group.calendar.google.com'
+    
+    for i in form_ids:
+        event = calendar_service.events().get(calendarId=calendar_id, eventId=i['event']).execute()
+        form = forms_service.forms().get(formId=i['form']).execute()
+        timing = datetime.datetime.fromisoformat(event['start']['dateTime'])
+        timing_offset = timing - datetime.timedelta(minutes=15)
+        if timing.weekday():
+            timing_deadline = timing - datetime.timedelta(days=2)
+        else:
+            timing_deadline = timing - datetime.timedelta(days=3)
+        lines = event['description'].split('\n')
+        place = 'ул. Костина, 2б'
+        diff = None
+        fees = None
+        for line in lines:
+            if line.find('Сложность') != -1:
+                diff = float(line[10:].replace(' ', ''))
+            if line.find('Где') != -1:
+                if line.find('TBA') == -1 and line.find('ТВА') == -1:
+                    place = line[5:]
+            if line.find('Взнос') != -1:
+                fee_lines = line[7:].split(',')
+                fees = {
+                    'Школьная команда': None, 
+                    'Студенческая (все игроки родились не раньше 01.09.2001) команда': None, 
+                    'Любая другая команда': None, 
+                    'Любая команда': None
+                }
+                for fl in fee_lines:
+                    if fl.find('всех') != -1:
+                        fees[list(fees.keys())[3]] = fl.split()[0]
+                    if fl.find('взрос') != -1:
+                        fees[list(fees.keys())[2]] = fl.split()[0]
+                    if fl.find('студен') != -1:
+                        fees[list(fees.keys())[1]] = fl.split()[0]
+                    if fl.find('школьн') != -1:
+                        fees[list(fees.keys())[0]] = fl.split()[0]
+                empty = []
+                fees_as_request = []
+                for key, value in fees.items():
+                    if value is None:
+                        empty.append(key)
+                        continue
+                    if value == '0':
+                        fees[key] = 'бесплатно'
+                    if fees[key] != 'бесплатно':
+                        fees[key] += 'р'
+                    if event['summary'].find('Школьная лига') != -1:
+                        fees[list(fees.keys())[0]] = '600 за 6 туров'
+                for key in empty:
+                    fees.pop(key)
+                for key, value in fees.items():
+                    fees_as_request.append({'value': f'{key} - {value}'})
+                
+        description = ''
+        description += f'Дата проведения: {timing.day} {months_gen[timing.month]}, {weekdays_long[timing.weekday()]}\n'
+        description += f'Время начала: {timing_offset.hour:02d}:{timing_offset.minute:02d} - сбор, {timing.hour:02d}:{timing.minute:02d} - первый вопрос\n'
+        description += f'Место проведения: {place}\n'
+        if diff:
+            description += f'Сложность: {diff}\n'
+        description += '\nОрганизатор: Клуб Интеллектуальных Игр ВШЭ-НН (https://vk.com/chgk_hsenn)\n\n'
+        description += f'Обратите внимание! На оформление пропусков в вуз необходимо время, поэтому мы сможем допустить только тех игроков не из ВШЭ, которые зарегистрируются не позже 10 утра {timing_deadline.day} {months_gen[timing_deadline.month]}. Спасибо за понимание!'
+        header_update = {'requests': [
+            {
+            'updateFormInfo': {
+                'info': {
+                    'description': (description),
+                    'title': event['summary']
+                },
+                'updateMask': 'description, title',
+            }}
+        ]}
+        forms_service.forms().batchUpdate(formId=form['formId'], body=header_update).execute() 
+        if fees:
+            fees_update = {'requests': [
+                {
+                'updateItem': {
+                    'item': {
+                        'title': 'Зачёт, в который входит ваша команда',
+                        'questionItem': {'question': {
+                            'required': True,
+                            'choiceQuestion': {
+                                'type': 'RADIO',
+                                'options': fees_as_request
+                            }
+                        }},
+                    },
+                    'location': {'index': 4},
+                    'updateMask': '*'
+                }}
+            ]}
+            forms_service.forms().batchUpdate(formId=form['formId'], body=fees_update).execute() 
