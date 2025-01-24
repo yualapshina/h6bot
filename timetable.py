@@ -31,6 +31,61 @@ months_gen = {
 colors_synch = ['5', '6', '11']
 colors_club = ['1', '2', '3', '7', '10']
 
+class Service(object):
+    __instance = None
+    def __new__(cls):
+        if cls.__instance is None:
+            cls.__instance = super(Service, cls).__new__(cls)
+            cls.__instance.__initialized = False
+        return cls.__instance
+    
+    def __init__(self):
+        if self.__initialized:
+            return
+        self.__initialized = True
+        SCOPES = [
+            "https://www.googleapis.com/auth/forms.body",
+            "https://www.googleapis.com/auth/drive.file"
+        ]
+        DISCOVERY_DOC = "https://forms.googleapis.com/$discovery/rest?version=v1"
+        store = file.Storage("token.json")
+        try:
+            creds = store.get()
+        except:
+            creds = None
+        if not creds or creds.invalid:
+            flow = client.flow_from_clientsecrets("client_secrets.json", SCOPES)
+            creds = tools.run_flow(flow, store)
+            with open('token.json', 'w') as token:
+                token.write(creds.to_json())
+        self.forms = discovery.build(
+            "forms",
+            "v1",
+            http=creds.authorize(Http()),
+            discoveryServiceUrl=DISCOVERY_DOC,
+            static_discovery=False,
+        )
+        tempform = self.forms.forms().create(body={
+            'info': {
+                        'title': 'tempform',
+                        'documentTitle': f'tempform ({datetime.datetime.now().strftime('%Y%m%d %H:%M:%S')})'
+                    }
+        }).execute()
+        
+        self.drive = discovery.build("drive", "v3", credentials=creds)
+        self.drive.files().delete(fileId=tempform['formId']).execute()
+        
+        self.calendar, flags = sample_tools.init(
+            sys.argv,
+            "calendar",
+            "v3",
+            __doc__,
+            __file__,
+            scope="https://www.googleapis.com/auth/calendar.readonly",
+        )
+        calendar_id = os.environ.get("CALENDAR")
+        self.calendar.events().list(calendarId=calendar_id).execute()
+        
 class ImageResponse:
     def __init__(self):
         self.prefix = 'static/' + str(datetime.datetime.now().timestamp()) + '/'
@@ -92,16 +147,9 @@ def get_list(date_start, date_end):
     time_min = (time_start - timezone).isoformat() + 'Z'
     time_max = (time_end - timezone).isoformat() + 'Z'
     
-    service, flags = sample_tools.init(
-        sys.argv,
-        "calendar",
-        "v3",
-        __doc__,
-        __file__,
-        scope="https://www.googleapis.com/auth/calendar.readonly",
-    )
-    calendar_id = '76dbb37f954769a5b2629eeb1bc90db8c1b87cbc8d1573c1276fff5ead6c7b5a@group.calendar.google.com'
-    events = service.events().list(calendarId=calendar_id, singleEvents=True, orderBy='startTime', timeMin=time_min, timeMax=time_max).execute()
+    service = Service()
+    calendar_id = os.environ.get("CALENDAR")
+    events = service.calendar.events().list(calendarId=calendar_id, singleEvents=True, orderBy='startTime', timeMin=time_min, timeMax=time_max).execute()
     return events
     
     
@@ -118,16 +166,18 @@ def print_plans(period='week', date=None):
     if period == 'month':
         print(f'Расписание на {months_nom[date_start.month]}:')
     if period == 'week':
-        print(f'Расписание с {date_start.day:02d}.{date_start.month:02d} по {date_end.day:02d}.{date_end.month:02d}:')
+        date_end_pretty = date_end - datetime.timedelta(days=1)
+        print(f'Расписание с {date_start.day:02d}.{date_start.month:02d} по {date_end_pretty.day:02d}.{date_end_pretty.month:02d}:')
     if period == 'day':
         print(f'Расписание на {date_start.day} {months_gen[date_start.month]}:')
-
+    
     events = get_list(date_start, date_end)
     if not events['items']:
         print('Мероприятий не найдено. Ура! Или не ура?')
         return result.getvalue()
         
     for i, event in enumerate(events['items']):
+        print()
         print(f'{i+1}. {event['summary']}')
         try:
             timing = datetime.datetime.fromisoformat(event['start']['dateTime'])
@@ -142,7 +192,6 @@ def print_plans(period='week', date=None):
             lines.pop(0)
             lines.append(info)
         print('\n'.join(lines))
-        print()
 
     return result.getvalue()   
 
@@ -250,7 +299,8 @@ def draw_plans(period='week', date=None):
             
     if period == 'week' or period == 'day':
         if period == 'week':
-            response.set_caption(f'Афиши с {date_start.day:02d}.{date_start.month:02d} по {date_end.day:02d}.{date_end.month:02d}:')
+            date_end_pretty = date_end - datetime.timedelta(days=1)
+            response.set_caption(f'Афиши с {date_start.day:02d}.{date_start.month:02d} по {date_end_pretty.day:02d}.{date_end_pretty.month:02d}:')
         if period == 'day':
             response.set_caption(f'Афиши на {date_start.day} {months_gen[date_start.month]}:')
         date_start, date_end = parse_dates('week', date)
@@ -504,7 +554,8 @@ def form_plans(period='week', date=None):
     if period == 'month':
         print(f'Формы на {months_nom[date_start.month]}:')
     if period == 'week':
-        print(f'Формы с {date_start.day:02d}.{date_start.month:02d} по {date_end.day:02d}.{date_end.month:02d}:')
+        date_end_pretty = date_end - datetime.timedelta(days=1)
+        print(f'Формы с {date_start.day:02d}.{date_start.month:02d} по {date_end_pretty.day:02d}.{date_end_pretty.month:02d}:')
     if period == 'day':
         print(f'Формы на {date_start.day} {months_gen[date_start.month]}:')
 
@@ -512,27 +563,6 @@ def form_plans(period='week', date=None):
     if not events['items']:
         print('Мероприятий не найдено. Ура! Или не ура?')
         return result.getvalue(), result_forms
-    
-    SCOPES = [
-        "https://www.googleapis.com/auth/forms.body",
-        "https://www.googleapis.com/auth/drive.file"
-    ]
-    DISCOVERY_DOC = "https://forms.googleapis.com/$discovery/rest?version=v1"
-    store = file.Storage("token.json")
-    creds = store.get()
-    if not creds or creds.invalid:
-        flow = client.flow_from_clientsecrets("client_secrets.json", SCOPES)
-        creds = tools.run_flow(flow, store)
-        with open('token.json', 'w') as token:
-            token.write(creds.to_json())
-    forms_service = discovery.build(
-        "forms",
-        "v1",
-        http=creds.authorize(Http()),
-        discoveryServiceUrl=DISCOVERY_DOC,
-        static_discovery=False,
-    )
-    drive_service = discovery.build("drive", "v3", credentials=creds)
     
     for event in events['items']:
         if event['summary'].find('Лига вузов') != -1 \
@@ -721,8 +751,9 @@ def form_plans(period='week', date=None):
             }}
         ]}
         
-        form = forms_service.forms().create(body=newform).execute()
-        ids = forms_service.forms().batchUpdate(formId=form['formId'], body=body_update).execute()['replies']
+        service = Service()
+        form = service.forms.forms().create(body=newform).execute()
+        ids = service.forms.forms().batchUpdate(formId=form['formId'], body=body_update).execute()['replies']
         team_section = ids[0]['createItem']['itemId']
         player_section = ids[9]['createItem']['itemId']
         
@@ -813,7 +844,7 @@ def form_plans(period='week', date=None):
             }}
         ]}
         
-        forms_service.forms().batchUpdate(formId=form['formId'], body=header_update).execute() 
+        service.forms.forms().batchUpdate(formId=form['formId'], body=header_update).execute() 
 
         if fees:
             fees_update = {'requests': [
@@ -832,11 +863,11 @@ def form_plans(period='week', date=None):
                     'location': {'index': 4}
                 }}
             ]}
-            forms_service.forms().batchUpdate(formId=form['formId'], body=fees_update).execute() 
+            service.forms.forms().batchUpdate(formId=form['formId'], body=fees_update).execute() 
         
-        formfile = drive_service.files().get(fileId=form['formId'], fields='parents').execute()
+        formfile = service.drive.files().get(fileId=form['formId'], fields='parents').execute()
         previous_parents = ','.join(formfile.get('parents'))
-        drive_service.files().update(
+        service.drive.files().update(
             fileId=form['formId'],
             addParents=os.environ.get("FOLDER"),
             removeParents=previous_parents,
@@ -852,37 +883,12 @@ def form_plans(period='week', date=None):
    
    
 def update_forms(form_ids):
-    SCOPES = [
-        "https://www.googleapis.com/auth/forms.body"
-    ]
-    DISCOVERY_DOC = "https://forms.googleapis.com/$discovery/rest?version=v1"
-    store = file.Storage("token.json")
-    creds = store.get()
-    if not creds or creds.invalid:
-        flow = client.flow_from_clientsecrets("client_secrets.json", SCOPES)
-        creds = tools.run_flow(flow, store)
-        with open('token.json', 'w') as token:
-            token.write(creds.to_json())
-    forms_service = discovery.build(
-        "forms",
-        "v1",
-        http=creds.authorize(Http()),
-        discoveryServiceUrl=DISCOVERY_DOC,
-        static_discovery=False,
-    )
-    calendar_service, flags = sample_tools.init(
-        sys.argv,
-        "calendar",
-        "v3",
-        __doc__,
-        __file__,
-        scope="https://www.googleapis.com/auth/calendar.readonly",
-    )
-    calendar_id = '76dbb37f954769a5b2629eeb1bc90db8c1b87cbc8d1573c1276fff5ead6c7b5a@group.calendar.google.com'
+    service = Service()
+    calendar_id = os.environ.get("CALENDAR")
     
     for i in form_ids:
-        event = calendar_service.events().get(calendarId=calendar_id, eventId=i['event']).execute()
-        form = forms_service.forms().get(formId=i['form']).execute()
+        event = service.calendar.events().get(calendarId=calendar_id, eventId=i['event']).execute()
+        form = service.forms.forms().get(formId=i['form']).execute()
         timing = datetime.datetime.fromisoformat(event['start']['dateTime'])
         timing_offset = timing - datetime.timedelta(minutes=15)
         if timing.weekday():
@@ -951,7 +957,7 @@ def update_forms(form_ids):
                 'updateMask': 'description, title',
             }}
         ]}
-        forms_service.forms().batchUpdate(formId=form['formId'], body=header_update).execute() 
+        service.forms.forms().batchUpdate(formId=form['formId'], body=header_update).execute() 
         if fees:
             fees_update = {'requests': [
                 {
@@ -970,4 +976,4 @@ def update_forms(form_ids):
                     'updateMask': '*'
                 }}
             ]}
-            forms_service.forms().batchUpdate(formId=form['formId'], body=fees_update).execute() 
+            service.forms.forms().batchUpdate(formId=form['formId'], body=fees_update).execute() 

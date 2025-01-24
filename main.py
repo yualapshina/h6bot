@@ -10,6 +10,9 @@ from dotenv import load_dotenv, find_dotenv
 
 load_dotenv(find_dotenv())
 
+service = timetable.Service()
+print('> auth complete!')
+
 token = os.environ.get("TOKEN")
 bot=telebot.TeleBot(token, threaded=False)
 
