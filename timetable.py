@@ -535,7 +535,7 @@ def poll_plans(period='week', date=None):
             timing = datetime.datetime.fromisoformat(event['start']['dateTime'])
             option = f'{event['summary']} ({weekdays_long[timing.weekday()]})'
             options.append(telebot.types.InputPollOption(option))
-    options.append(telebot.types.InputPollOption('тык, если проголосовал'))
+    options.append(telebot.types.InputPollOption('да, нет, другое'))
        
     return question, options, False
     
@@ -580,15 +580,15 @@ def form_plans(period='week', date=None):
             {
             'createItem': {
                 'item': {
-                    'title': 'Команда',
-                    'description': 'Заполните, пожалуйста, информацию о вашей команде, чтобы мы подготовили всё должным образом.',
+                    'title': 'Легионер',
+                    'description': 'Заполните, пожалуйста, информацию о себе, чтобы мы подобрали для вас лучшую команду.',
                     'pageBreakItem': {}
                 },
                 'location': {'index': 0},
             }},{
             'createItem': {
                 'item': {
-                    'title': 'Название команды',
+                    'title': 'ФИО',
                     'questionItem': {'question': {
                         'required': True,
                         'textQuestion': {}
@@ -598,7 +598,7 @@ def form_plans(period='week', date=None):
             }},{
             'createItem': {
                 'item': {
-                    'title': 'ID команды на сайте рейтинга (если нет или не знаете, о чём речь, поставьте 0)',
+                    'title': 'ВК или ТГ для связи',
                     'questionItem': {'question': {
                         'required': True,
                         'textQuestion': {}
@@ -608,13 +608,88 @@ def form_plans(period='week', date=None):
             }},{
             'createItem': {
                 'item': {
+                    'title': 'Дата рождения',
+                    'questionItem': {'question': {
+                        'required': True,
+                        'dateQuestion': {
+                            'includeYear': True
+                        }
+                    }},
+                },
+                'location': {'index': 3},
+            }},{
+            'createItem': {
+                'item': {
+                    'title': 'Занятость',
+                    'questionItem': {'question': {
+                        'required': True,
+                        'choiceQuestion': {
+                            'type': 'RADIO',
+                            'options': [{
+                                'value': 'Обучаюсь в школе',
+                                'goToAction': 'SUBMIT_FORM'
+                                },{
+                                'value': 'Обучаюсь в НИУ ВШЭ',
+                                'goToAction': 'SUBMIT_FORM'
+                                },{
+                                'value': 'Обучаюсь в другом вузе',
+                                'goToAction': 'SUBMIT_FORM'
+                                },{
+                                'value': 'Другое',
+                                'goToAction': 'SUBMIT_FORM'
+                                }
+                            ]
+                        }
+                    }},
+                },
+                'location': {'index': 4},
+            }},{
+            'createItem': {
+                'item': {
+                    'title': 'Любые вопросы и сообщения для оргкомитета',
+                    'questionItem': {'question': {
+                        'textQuestion': {}
+                    }},
+                },
+                'location': {'index': 5},
+            }},{
+            'createItem': {
+                'item': {
+                    'title': 'Команда',
+                    'description': 'Заполните, пожалуйста, информацию о вашей команде, чтобы мы подготовили всё должным образом.',
+                    'pageBreakItem': {}
+                },
+                'location': {'index': 6},
+            }},{
+            'createItem': {
+                'item': {
+                    'title': 'Название команды',
+                    'questionItem': {'question': {
+                        'required': True,
+                        'textQuestion': {}
+                    }},
+                },
+                'location': {'index': 7},
+            }},{
+            'createItem': {
+                'item': {
+                    'title': 'ID команды на сайте рейтинга (если нет или не знаете, о чём речь, поставьте 0)',
+                    'questionItem': {'question': {
+                        'required': True,
+                        'textQuestion': {}
+                    }},
+                },
+                'location': {'index': 8},
+            }},{
+            'createItem': {
+                'item': {
                     'title': 'ФИО капитана',
                     'questionItem': {'question': {
                         'required': True,
                         'textQuestion': {}
                     }},
                 },
-                'location': {'index': 3},
+                'location': {'index': 9},
             }},{
             'createItem': {
                 'item': {
@@ -624,7 +699,7 @@ def form_plans(period='week', date=None):
                         'textQuestion': {}
                     }},
                 },
-                'location': {'index': 4},
+                'location': {'index': 10},
             }},{
             'createItem': {
                 'item': {
@@ -637,7 +712,7 @@ def form_plans(period='week', date=None):
                         }
                     }},
                 },
-                'location': {'index': 5},
+                'location': {'index': 11},
             }},{
             'createItem': {
                 'item': {
@@ -649,7 +724,7 @@ def form_plans(period='week', date=None):
                         }
                     }},
                 },
-                'location': {'index': 6},
+                'location': {'index': 12},
             }},{
             'createItem': {
                 'item': {
@@ -660,102 +735,24 @@ def form_plans(period='week', date=None):
                         }
                     }},
                 },
-                'location': {'index': 7},
-            }},{
-            'createItem': {
-                'item': {
-                    'title': 'Любые вопросы и сообщения для оргкомитета',
-                    'questionItem': {'question': {
-                        'textQuestion': {}
-                    }},
-                },
-                'location': {'index': 8},
-            }},{
-            'createItem': {
-                'item': {
-                    'title': 'Легионер',
-                    'description': 'Заполните, пожалуйста, информацию о себе, чтобы мы подобрали для вас лучшую команду.',
-                    'pageBreakItem': {}
-                },
-                'location': {'index': 9},
-            }},{
-            'createItem': {
-                'item': {
-                    'title': 'ФИО',
-                    'questionItem': {'question': {
-                        'required': True,
-                        'textQuestion': {}
-                    }},
-                },
-                'location': {'index': 10},
-            }},{
-            'createItem': {
-                'item': {
-                    'title': 'ВК или ТГ для связи',
-                    'questionItem': {'question': {
-                        'required': True,
-                        'textQuestion': {}
-                    }},
-                },
-                'location': {'index': 11},
-            }},{
-            'createItem': {
-                'item': {
-                    'title': 'Дата рождения',
-                    'questionItem': {'question': {
-                        'required': True,
-                        'dateQuestion': {
-                            'includeYear': True
-                        }
-                    }},
-                },
-                'location': {'index': 12},
-            }},{
-            'createItem': {
-                'item': {
-                    'title': 'Занятость',
-                    'questionItem': {'question': {
-                        'required': True,
-                        'choiceQuestion': {
-                            'type': 'RADIO',
-                            'options': [{
-                                'value': 'Обучаюсь в школе'
-                                },{
-                                'value': 'Обучаюсь в вузе (бакалавриат, магистратура или аспирантура)'
-                                },{
-                                'value': 'Другое'
-                                }
-                            ]
-                        }
-                    }},
-                },
                 'location': {'index': 13},
             }},{
             'createItem': {
                 'item': {
-                    'title': 'Если вы студент вуза, то укажите, пожалуйста, его название',
+                    'title': 'Любые вопросы и сообщения для оргкомитета',
                     'questionItem': {'question': {
                         'textQuestion': {}
                     }},
                 },
                 'location': {'index': 14},
-            }},{
-            'createItem': {
-                'item': {
-                    'title': 'Любые вопросы и сообщения для оргкомитета',
-                    'questionItem': {'question': {
-                        'textQuestion': {}
-                    }},
-                },
-                'location': {'index': 15},
             }}
         ]}
         
         service = Service()
         form = service.forms.forms().create(body=newform).execute()
         ids = service.forms.forms().batchUpdate(formId=form['formId'], body=body_update).execute()['replies']
-        team_section = ids[0]['createItem']['itemId']
-        player_section = ids[9]['createItem']['itemId']
+        team_section = ids[6]['createItem']['itemId']
+        player_section = ids[0]['createItem']['itemId']
         
         timing = datetime.datetime.fromisoformat(event['start']['dateTime'])
         timing_offset = timing - datetime.timedelta(minutes=15)
@@ -860,7 +857,7 @@ def form_plans(period='week', date=None):
                             }
                         }},
                     },
-                    'location': {'index': 4}
+                    'location': {'index': 10}
                 }}
             ]}
             service.forms.forms().batchUpdate(formId=form['formId'], body=fees_update).execute() 
@@ -972,7 +969,7 @@ def update_forms(form_ids):
                             }
                         }},
                     },
-                    'location': {'index': 4},
+                    'location': {'index': 10},
                     'updateMask': '*'
                 }}
             ]}
