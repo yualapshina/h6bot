@@ -31,60 +31,6 @@ months_gen = {
 colors_synch = ['5', '6', '11']
 colors_club = ['1', '2', '3', '7', '10']
 
-class Service(object):
-    __instance = None
-    def __new__(cls):
-        if cls.__instance is None:
-            cls.__instance = super(Service, cls).__new__(cls)
-            cls.__instance.__initialized = False
-        return cls.__instance
-    
-    def __init__(self):
-        if self.__initialized:
-            return
-        self.__initialized = True
-        SCOPES = [
-            "https://www.googleapis.com/auth/forms.body",
-            "https://www.googleapis.com/auth/drive.file"
-        ]
-        DISCOVERY_DOC = "https://forms.googleapis.com/$discovery/rest?version=v1"
-        store = file.Storage("token.json")
-        try:
-            creds = store.get()
-        except:
-            creds = None
-        if not creds or creds.invalid:
-            flow = client.flow_from_clientsecrets("client_secrets.json", SCOPES)
-            creds = tools.run_flow(flow, store)
-            with open('token.json', 'w') as token:
-                token.write(creds.to_json())
-        self.forms = discovery.build(
-            "forms",
-            "v1",
-            http=creds.authorize(Http()),
-            discoveryServiceUrl=DISCOVERY_DOC,
-            static_discovery=False,
-        )
-        tempform = self.forms.forms().create(body={
-            'info': {
-                        'title': 'tempform',
-                        'documentTitle': f'tempform ({datetime.datetime.now().strftime('%Y%m%d %H:%M:%S')})'
-                    }
-        }).execute()
-        
-        self.drive = discovery.build("drive", "v3", credentials=creds)
-        self.drive.files().delete(fileId=tempform['formId']).execute()
-        
-        self.calendar, flags = sample_tools.init(
-            sys.argv,
-            "calendar",
-            "v3",
-            __doc__,
-            __file__,
-            scope="https://www.googleapis.com/auth/calendar.readonly",
-        )
-        calendar_id = os.environ.get("CALENDAR")
-        self.calendar.events().list(calendarId=calendar_id).execute()
         
 class ImageResponse:
     def __init__(self):
@@ -118,6 +64,73 @@ class ImageResponse:
         shutil.rmtree(self.prefix)
             
 
+def auth():
+    SCOPES = [
+        "https://www.googleapis.com/auth/forms.body",
+        "https://www.googleapis.com/auth/drive.file"
+    ]
+    DISCOVERY_DOC = "https://forms.googleapis.com/$discovery/rest?version=v1"
+    store = file.Storage("token.json")
+    try:
+        creds = store.get()
+    except:
+        creds = None
+    if not creds or creds.invalid:
+        flow = client.flow_from_clientsecrets("client_secrets.json", SCOPES)
+        creds = tools.run_flow(flow, store)
+        with open('token.json', 'w') as token:
+            token.write(creds.to_json())
+
+    forms = discovery.build(
+        "forms",
+        "v1",
+        http=creds.authorize(Http()),
+        discoveryServiceUrl=DISCOVERY_DOC,
+        static_discovery=False,
+    )
+    drive = discovery.build("drive", "v3", credentials=creds)
+    tempform = forms.forms().create(body={
+        'info': {
+                    'title': 'tempform',
+                    'documentTitle': f'tempform ({datetime.datetime.now().strftime('%Y%m%d %H:%M:%S')})'
+                }
+    }).execute()
+    drive.files().delete(fileId=tempform['formId']).execute()
+    
+    calendar, flags = sample_tools.init(
+        sys.argv,
+        "calendar",
+        "v3",
+        __doc__,
+        __file__,
+        scope="https://www.googleapis.com/auth/calendar.readonly",
+    )
+    calendar_id = os.environ.get("CALENDAR")
+    calendar.events().list(calendarId=calendar_id).execute()
+
+
+def get_services():
+    DISCOVERY_DOC = "https://forms.googleapis.com/$discovery/rest?version=v1"
+    creds = file.Storage("token.json").get()
+    forms = discovery.build(
+        "forms",
+        "v1",
+        http=creds.authorize(Http()),
+        discoveryServiceUrl=DISCOVERY_DOC,
+        static_discovery=False,
+    )
+    drive = discovery.build("drive", "v3", credentials=creds)
+    calendar, flags = sample_tools.init(
+        sys.argv,
+        "calendar",
+        "v3",
+        __doc__,
+        __file__,
+        scope="https://www.googleapis.com/auth/calendar.readonly",
+    )
+    return forms, drive, calendar
+
+
 def parse_dates(period, datestr):
     if datestr:
         queryday = datetime.datetime.strptime(datestr, "%Y%m%d")
@@ -147,9 +160,9 @@ def get_list(date_start, date_end):
     time_min = (time_start - timezone).isoformat() + 'Z'
     time_max = (time_end - timezone).isoformat() + 'Z'
     
-    service = Service()
+    forms_service, drive_service, calendar_service = get_services()
     calendar_id = os.environ.get("CALENDAR")
-    events = service.calendar.events().list(calendarId=calendar_id, singleEvents=True, orderBy='startTime', timeMin=time_min, timeMax=time_max).execute()
+    events = calendar_service.events().list(calendarId=calendar_id, singleEvents=True, orderBy='startTime', timeMin=time_min, timeMax=time_max).execute()
     return events
     
     
@@ -748,9 +761,9 @@ def form_plans(period='week', date=None):
             }}
         ]}
         
-        service = Service()
-        form = service.forms.forms().create(body=newform).execute()
-        ids = service.forms.forms().batchUpdate(formId=form['formId'], body=body_update).execute()['replies']
+        forms_service, drive_service, calendar_service = get_services()
+        form = forms_service.forms().create(body=newform).execute()
+        ids = forms_service.forms().batchUpdate(formId=form['formId'], body=body_update).execute()['replies']
         team_section = ids[6]['createItem']['itemId']
         player_section = ids[0]['createItem']['itemId']
         
@@ -841,7 +854,7 @@ def form_plans(period='week', date=None):
             }}
         ]}
         
-        service.forms.forms().batchUpdate(formId=form['formId'], body=header_update).execute() 
+        forms_service.forms().batchUpdate(formId=form['formId'], body=header_update).execute()
 
         if fees:
             fees_update = {'requests': [
@@ -860,11 +873,11 @@ def form_plans(period='week', date=None):
                     'location': {'index': 10}
                 }}
             ]}
-            service.forms.forms().batchUpdate(formId=form['formId'], body=fees_update).execute() 
+            forms_service.forms().batchUpdate(formId=form['formId'], body=fees_update).execute()
         
-        formfile = service.drive.files().get(fileId=form['formId'], fields='parents').execute()
+        formfile = drive_service.files().get(fileId=form['formId'], fields='parents').execute()
         previous_parents = ','.join(formfile.get('parents'))
-        service.drive.files().update(
+        drive_service.files().update(
             fileId=form['formId'],
             addParents=os.environ.get("FOLDER"),
             removeParents=previous_parents,
@@ -880,12 +893,12 @@ def form_plans(period='week', date=None):
    
    
 def update_forms(form_ids):
-    service = Service()
+    forms_service, drive_service, calendar_service = get_services()
     calendar_id = os.environ.get("CALENDAR")
     
     for i in form_ids:
-        event = service.calendar.events().get(calendarId=calendar_id, eventId=i['event']).execute()
-        form = service.forms.forms().get(formId=i['form']).execute()
+        event = calendar_service.events().get(calendarId=calendar_id, eventId=i['event']).execute()
+        form = forms_service.forms().get(formId=i['form']).execute()
         timing = datetime.datetime.fromisoformat(event['start']['dateTime'])
         timing_offset = timing - datetime.timedelta(minutes=15)
         if timing.weekday():
@@ -954,7 +967,7 @@ def update_forms(form_ids):
                 'updateMask': 'description, title',
             }}
         ]}
-        service.forms.forms().batchUpdate(formId=form['formId'], body=header_update).execute() 
+        forms_service.forms().batchUpdate(formId=form['formId'], body=header_update).execute()
         if fees:
             fees_update = {'requests': [
                 {
@@ -973,4 +986,4 @@ def update_forms(form_ids):
                     'updateMask': '*'
                 }}
             ]}
-            service.forms.forms().batchUpdate(formId=form['formId'], body=fees_update).execute() 
+            forms_service.forms().batchUpdate(formId=form['formId'], body=fees_update).execute()

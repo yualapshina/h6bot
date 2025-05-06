@@ -2,6 +2,8 @@ import timetable
 import wordplay
 import telebot
 from telebot import types
+from oauth2client import client
+import random
 import datetime
 import sys
 import json
@@ -10,11 +12,20 @@ from dotenv import load_dotenv, find_dotenv
 
 load_dotenv(find_dotenv())
 
-service = timetable.Service()
+repeat = True
+while repeat:
+    try:
+        timetable.auth()
+    except client.HttpAccessTokenRefreshError:
+        repeat = True
+    else:
+        repeat = False
 print('> auth complete!')
 
 token = os.environ.get("TOKEN")
 bot=telebot.TeleBot(token, threaded=False)
+
+emojis = ["👍", "👎", "❤", "🔥", "🥰", "👏", "😁", "🤔", "🤯", "😱", "🤬", "😢", "🎉", "🤩", "🤮", "💩", "🙏", "👌", "🕊", "🤡", "🥱", "🥴", "😍", "🐳", "❤‍🔥", "🌚", "🌭", "💯", "🤣", "⚡", "🍌", "🏆", "💔", "🤨", "😐", "🍓", "🍾", "💋", "🖕", "😈", "😴", "😭", "🤓", "👻", "👨‍💻", "👀", "🎃", "🙈", "😇", "😨", "🤝", "✍", "🤗", "🫡", "🎅", "🎄", "☃", "💅", "🤪", "🗿", "🆒", "💘", "🙉", "🦄", "😘", "💊", "🙊", "😎", "👾", "🤷‍♂", "🤷", "🤷‍♀", "😡"]
 
 bot.set_my_commands([
     telebot.types.BotCommand(command='start', description='приветствие'),
@@ -25,6 +36,7 @@ bot.set_my_commands([
     telebot.types.BotCommand(command='posters', description='(дебаг) афиши'),
     telebot.types.BotCommand(command='poll', description='(дебаг) опрос участия'),
     telebot.types.BotCommand(command='forms', description='(дебаг) гугл-формы'),
+    telebot.types.BotCommand(command='mfw', description='(дебаг) случайная реакция'),
 ])
 bot.set_chat_menu_button(menu_button=types.MenuButtonCommands('commands'))
 
@@ -35,7 +47,7 @@ def command_start(message):
 
 @bot.message_handler(commands=['triggers'])
 def command_triggers(message):
-    text = 'Список текущих скрытых талантов:\n⚡ реагирую на непростые\n🌸 реагирую на хайку'
+    text = 'Список текущих скрытых талантов:\n⚡ реагирую на непростые\n🌸 замечаю хайку\n🌭 присоединяюсь к форсам'
     bot.send_message(message.chat.id, text)
 
 @bot.message_handler(commands=['list'])
@@ -207,6 +219,23 @@ def command_update(message):
     with open('current_plans.json', 'w') as f:
         json.dump(current_plans, f)
 
+@bot.message_handler(commands=['mfw'])
+def command_mfw(message):
+    full_chat = bot.get_chat(message.chat.id)
+    reacts = full_chat.available_reactions
+    if reacts is None:
+        reacts = list(map(lambda x: types.ReactionTypeEmoji(x), emojis))
+    bot.set_message_reaction(message.chat.id, message.id, [random.choice(reacts)], is_big=True)
+
+
+@bot.message_handler(commands=['send'])
+def command_send(message):
+    args = message.text.split()  
+    chat = args[1]
+    content = args[2]
+    bot.send_message(chat, content, entities=[types.MessageEntity('spoiler', 0, len(content))])
+    
+
 def react_ring(messages):
     for message in messages:
         if not message.text:
@@ -220,7 +249,51 @@ def react_ring(messages):
         sys.stdout = old_stdout
 
 
+def join_in(messages):
+    with open('current_plans.json', 'r') as f:
+        current_plans = json.load(f)
+        
+    for message in messages:
+        chat = str(message.chat.id)
+        content = ''
+        if message.sticker is not None:
+            typ = 'sticker'
+            content = message.sticker.file_id
+        elif message.text is not None:
+            typ = 'text'
+            content = message.text
+        else:
+            typ = 'other'
+        forbidden = ['custom_emoji', 'bot_command']
+        entities = message.entities if message.entities is not None else []
+        if any(map(lambda x: x.type in forbidden, entities)):
+            typ = 'other'
+        if chat not in current_plans:
+            current_plans[chat] = {}
+        if 'last' not in current_plans[chat]:
+            current_plans[chat]['last'] = {'message': '', 'type': '', 'count': 0}
+        last_content = current_plans[chat]['last']['message']
+        last_type = current_plans[chat]['last']['type']
+        if typ != 'other' and last_type == typ and last_content == content:
+            current_plans[chat]['last']['count'] += 1
+        else:
+            current_plans[chat]['last']['message'] = content
+            current_plans[chat]['last']['type'] = typ
+            current_plans[chat]['last']['count'] = 1
+    
+    for chat in current_plans.keys():
+        if 'last' in current_plans[chat] and current_plans[chat]['last']['count'] > 2:
+            if current_plans[chat]['last']['type'] == 'text':
+                bot.send_message(chat, current_plans[chat]['last']['message'])
+            if current_plans[chat]['last']['type'] == 'sticker':
+                bot.send_sticker(chat, current_plans[chat]['last']['message'])
+            current_plans[chat]['last']['count'] = 0
+    with open('current_plans.json', 'w') as f:
+        json.dump(current_plans, f)
+        
+
 print('> bot running!')
 
-bot.set_update_listener(react_ring)    
+bot.set_update_listener(react_ring)  
+bot.set_update_listener(join_in)    
 bot.infinity_polling()
