@@ -12,6 +12,9 @@ from dotenv import load_dotenv, find_dotenv
 
 load_dotenv(find_dotenv())
 
+with open('bible_lemmas.txt', 'r', encoding='utf-8') as f:
+    bible = f.read().split()
+
 repeat = True
 while repeat:
     try:
@@ -25,18 +28,17 @@ print('> auth complete!')
 token = os.environ.get("TOKEN")
 bot=telebot.TeleBot(token, threaded=False)
 
-emojis = ["👍", "👎", "❤", "🔥", "🥰", "👏", "😁", "🤔", "🤯", "😱", "🤬", "😢", "🎉", "🤩", "🤮", "💩", "🙏", "👌", "🕊", "🤡", "🥱", "🥴", "😍", "🐳", "❤‍🔥", "🌚", "🌭", "💯", "🤣", "⚡", "🍌", "🏆", "💔", "🤨", "😐", "🍓", "🍾", "💋", "🖕", "😈", "😴", "😭", "🤓", "👻", "👨‍💻", "👀", "🎃", "🙈", "😇", "😨", "🤝", "✍", "🤗", "🫡", "🎅", "🎄", "☃", "💅", "🤪", "🗿", "🆒", "💘", "🙉", "🦄", "😘", "💊", "🙊", "😎", "👾", "🤷‍♂", "🤷", "🤷‍♀", "😡"]
 
 bot.set_my_commands([
     telebot.types.BotCommand(command='start', description='приветствие'),
     telebot.types.BotCommand(command='plan', description='добавить материалы на неделю'),
-    telebot.types.BotCommand(command='update', description='обновить материалы на неделю'),
+    telebot.types.BotCommand(command='guests', description='списки на дату'),
     telebot.types.BotCommand(command='triggers', description='список скрытых талантов'),
+    telebot.types.BotCommand(command='ping', description='(дебаг) пинг'),
     telebot.types.BotCommand(command='list', description='(дебаг) текстовое расписание'),
     telebot.types.BotCommand(command='posters', description='(дебаг) афиши'),
     telebot.types.BotCommand(command='poll', description='(дебаг) опрос участия'),
     telebot.types.BotCommand(command='forms', description='(дебаг) гугл-формы'),
-    telebot.types.BotCommand(command='mfw', description='(дебаг) случайная реакция'),
 ])
 bot.set_chat_menu_button(menu_button=types.MenuButtonCommands('commands'))
 
@@ -86,6 +88,16 @@ def command_forms(message):
     text, form_ids = timetable.form_plans(args[1] if len(args)>1 else 'week', args[2] if len(args)>2 else None)
     sys.stdout = old_stdout
     bot.edit_message_text(text, message.chat.id, placeholder.message_id)
+    
+@bot.message_handler(commands=['guests'])
+def command_guests(message):
+    args = message.text.split()
+    old_stdout = sys.stdout
+    date = datetime.date.today() + datetime.timedelta(days=2)
+    date = date.strftime("%Y%m%d")
+    text = timetable.get_guests(args[1] if len(args)>1 else 'day', args[2] if len(args)>2 else date)
+    sys.stdout = old_stdout
+    bot.send_message(message.chat.id, text)
 
 @bot.message_handler(commands=['plan'])
 def command_plan(message):
@@ -100,8 +112,8 @@ def command_plan(message):
     
     with open('current_plans.json', 'r') as f:
         current_plans = json.load(f)
-    if chat in current_plans and date in current_plans[chat]:
-        bot.send_message(message.chat.id, 'Неделя уже запланирована. Может, хотите запустить /update?')
+    if chat in current_plans and date in current_plans[chat] and 'force' not in args:
+        bot.send_message(message.chat.id, 'Неделя уже запланирована. Если хотите полностью обновить информацию, используйте аргумент force')
         return
     
     if chat not in current_plans:
@@ -114,7 +126,10 @@ def command_plan(message):
     sys.stdout = old_stdout
     sent_list = bot.send_message(message.chat.id, text)
     current_plans[chat][date]['list'] = sent_list.message_id 
-    bot.pin_chat_message(message.chat.id, current_plans[chat][date]['list'], disable_notification=True)
+    try:
+        bot.pin_chat_message(message.chat.id, current_plans[chat][date]['list'], disable_notification=True)
+    except:
+        print('! pin message error')
     
     question, options, is_closed = timetable.poll_plans(period, date)
     sent_poll = bot.send_poll(
@@ -134,98 +149,30 @@ def command_plan(message):
     
     sent_forms = bot.send_message(message.chat.id, 'Формы сейчас будут 👉👈')
     old_stdout = sys.stdout
-    text, form_ids = timetable.form_plans(period, date)
+    text = timetable.form_plans(period, date)
     sys.stdout = old_stdout
     bot.edit_message_text(text, message.chat.id, sent_forms.message_id)
     current_plans[chat][date]['forms'] = sent_forms.message_id 
-    current_plans[chat][date]['form_ids'] = form_ids
     
     old_plans = []
     for key in current_plans[chat]:
+        if key == 'last':
+            continue
         if int(key) < int(expiry_date):
             old_plans.append(key)
     for old in old_plans:
         try:
             bot.unpin_chat_message(message.chat.id, current_plans[chat][old]['list'])
         except:
-            pass
+            print('! unpin message error')
         current_plans[chat].pop(old)
     with open('current_plans.json', 'w') as f:
         json.dump(current_plans, f)
 
-@bot.message_handler(commands=['update'])
-def command_update(message):
-    chat = str(message.chat.id)
-    args = message.text.split()
-    date = datetime.date.today() - datetime.timedelta(days=datetime.date.today().weekday())
-    if 'next' in args:
-        date += datetime.timedelta(days=7)
-    date = date.strftime("%Y%m%d")
-    period = 'week'
-    
-    with open('current_plans.json', 'r') as f:
-        current_plans = json.load(f)
-    if chat not in current_plans or date not in current_plans[chat]:
-        bot.send_message(message.chat.id, 'Неделя ещё не запланирована. Может, хотите запустить /plan?')
-        return
-        
-    old_stdout = sys.stdout
-    text = timetable.print_plans(period, date)
-    sys.stdout = old_stdout
-    if 'global' in args:
-        bot.unpin_chat_message(message.chat.id, current_plans[chat][date]['list'])
-        sent_list = bot.send_message(message.chat.id, text)
-        current_plans[chat][date]['list'] = sent_list.message_id 
-        bot.pin_chat_message(message.chat.id, current_plans[chat][date]['list'], disable_notification=True)
-    else:
-        try:
-            bot.edit_message_text(text, message.chat.id, current_plans[chat][date]['list'])
-            bot.send_message(message.chat.id, 'Обновлено.', 
-                reply_parameters=telebot.types.ReplyParameters(current_plans[chat][date]['list']))
-        except:
-            bot.send_message(message.chat.id, 'Информация актуальна', 
-                reply_parameters=telebot.types.ReplyParameters(current_plans[chat][date]['list']))
-    
-    if 'global' in args:
-        question, options, is_closed = timetable.poll_plans(period, date)
-        sent_poll = bot.send_poll(
-            message.chat.id, 
-            question, 
-            options, 
-            is_anonymous=False, 
-            allows_multiple_answers=True, 
-            is_closed=is_closed
-        )
-        current_plans[chat][date]['poll'] = sent_poll.message_id 
-    
-    response = timetable.draw_plans(period, date)
-    sent_posters = bot.send_media_group(message.chat.id, response.prepare())
-    current_plans[chat][date]['posters'] = sent_posters[0].message_id 
-    response.clear()
-    
-    if 'global' in args:
-        sent_forms = bot.send_message(message.chat.id, 'Формы сейчас будут 👉👈')
-        old_stdout = sys.stdout
-        text, form_ids = timetable.form_plans(period, date)
-        sys.stdout = old_stdout
-        bot.edit_message_text(text, message.chat.id, sent_forms.message_id)
-        current_plans[chat][date]['forms'] = sent_forms.message_id 
-        current_plans[chat][date]['form_ids'] = form_ids
-    else:
-        timetable.update_forms(current_plans[chat][date]['form_ids'])
-        bot.send_message(message.chat.id, 'Обновлено (на всякий случай, как и афиши)', 
-                reply_parameters=telebot.types.ReplyParameters(current_plans[chat][date]['forms']))
-    
-    with open('current_plans.json', 'w') as f:
-        json.dump(current_plans, f)
 
-@bot.message_handler(commands=['mfw'])
-def command_mfw(message):
-    full_chat = bot.get_chat(message.chat.id)
-    reacts = full_chat.available_reactions
-    if reacts is None:
-        reacts = list(map(lambda x: types.ReactionTypeEmoji(x), emojis))
-    bot.set_message_reaction(message.chat.id, message.id, [random.choice(reacts)], is_big=True)
+@bot.message_handler(commands=['ping'])
+def command_ping(message):
+    bot.set_message_reaction(message.chat.id, message.id, [types.ReactionTypeEmoji('👌')], is_big=False)
 
 
 @bot.message_handler(commands=['send'])
@@ -233,19 +180,33 @@ def command_send(message):
     args = message.text.split()  
     chat = args[1]
     content = args[2]
-    bot.send_message(chat, content, entities=[types.MessageEntity('spoiler', 0, len(content))])
+    chat = os.environ.get(chat.upper()) if os.environ.get(chat.upper()) is not None else chat
+    try:
+        bot.send_message(chat, content, entities=[types.MessageEntity('spoiler', 0, len(content))])
+    except:
+        pass
+    else:
+        bot.set_message_reaction(message.chat.id, message.id, [types.ReactionTypeEmoji('🫡')], is_big=False)
     
 
-def react_ring(messages):
+def reactions(messages):
     for message in messages:
         if not message.text:
             return
         old_stdout = sys.stdout
+        
         if wordplay.check_equi(message.text):
             bot.set_message_reaction(message.chat.id, message.id, [types.ReactionTypeEmoji('⚡')], is_big=False)
+            
         haiku = wordplay.find_haiku(message.text)
         if haiku:
             bot.send_message(message.chat.id, haiku, reply_parameters=telebot.types.ReplyParameters(message.id))
+           
+        if str(message.chat.id) == os.environ.get("DEBUG_CHAT"):
+            if not wordplay.check_bible(message.text, bible):
+                reply = '(ни одного из этих слов нет в Библии)'
+                # bot.send_message(message.chat.id, reply, reply_parameters=telebot.types.ReplyParameters(message.id))
+            
         sys.stdout = old_stdout
 
 
@@ -264,6 +225,7 @@ def join_in(messages):
             content = message.text
         else:
             typ = 'other'
+        content = content.lower()
         forbidden = ['custom_emoji', 'bot_command']
         entities = message.entities if message.entities is not None else []
         if any(map(lambda x: x.type in forbidden, entities)):
@@ -294,6 +256,6 @@ def join_in(messages):
 
 print('> bot running!')
 
-bot.set_update_listener(react_ring)  
+bot.set_update_listener(reactions)  
 bot.set_update_listener(join_in)    
 bot.infinity_polling()

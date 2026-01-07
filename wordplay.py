@@ -1,8 +1,10 @@
 from io import StringIO
 import sys
+import string
 from stressrnn import StressRNN
+from pymystem3 import Mystem
 
-def encode(text):
+def encode_vowels(text):
     vowels = ['а', 'ы', 'у', 'э', 'о', 'я', 'и', 'ю', 'е', 'ё']
     code = ''
     for i in range(len(text)-1):
@@ -13,7 +15,7 @@ def encode(text):
     return code
   
   
-def compare(words, list_cur, level=0):
+def compare_equi(words, list_cur, level=0):
     list_ret = []
     list_fut = []
     for index, example in list_cur:
@@ -31,7 +33,7 @@ def compare(words, list_cur, level=0):
                 list_ret.append((index-level, level+1))
             if len(word) < len(example) and index < len(words)-1:
                 list_fut.append((index+1, example[len(word):]))
-    return list_ret + compare(words, list_fut, level+1) if list_fut else list_ret
+    return list_ret + compare_equi(words, list_fut, level+1) if list_fut else list_ret
 
 
 def generate_start_list(words, example):
@@ -41,7 +43,7 @@ def generate_start_list(words, example):
     return start_list
 
 
-def find_equirhythmics(text, example='очень я тебя люблю'):  
+def find_equi(text, example='очень я тебя люблю'):  
     result = StringIO()
     sys.stdout = result  
     
@@ -51,10 +53,10 @@ def find_equirhythmics(text, example='очень я тебя люблю'):
         return result.getvalue()
     text = text.lower().replace('\n', ' ')
     words = text.split()
-    code_words = list(map(lambda x: encode(stress_rnn.put_stress(x)), words))
-    code_example = encode(stress_rnn.put_stress(example))
+    code_words = list(map(lambda x: encode_vowels(stress_rnn.put_stress(x)), words))
+    code_example = encode_vowels(stress_rnn.put_stress(example))
 
-    phrases = compare(code_words, generate_start_list(code_words, code_example))
+    phrases = compare_equi(code_words, generate_start_list(code_words, code_example))
     for index, level in phrases:
         print('> ' + ' '.join(words[index:index+level]))
     
@@ -63,7 +65,7 @@ def find_equirhythmics(text, example='очень я тебя люблю'):
     
 def check_equi(text=''):
     text = ' '.join(text.lower().replace('\n', ' ').split())
-    result = find_equirhythmics(text)
+    result = find_equi(text)
     return '> ' + text + '\n' == result
     
 
@@ -74,7 +76,7 @@ def find_haiku(text=''):
     stress_rnn = StressRNN()
     text = text.lower().replace('\n', ' ')
     words = text.split()
-    code_words = list(map(lambda x: encode(stress_rnn.put_stress(x)), words))
+    code_words = list(map(lambda x: encode_vowels(stress_rnn.put_stress(x)), words))
     lens = list(map(len, code_words))
     if sum(lens) != 17:
         return result.getvalue()
@@ -102,3 +104,24 @@ def find_haiku(text=''):
     print(' '.join(words[second_sep:]))
     print('🌸')
     return result.getvalue()
+
+
+def bible_lemmatize(text):
+    translator = str.maketrans('', '', string.punctuation)
+    text = text.translate(translator)
+    text = text.replace('\n', ' ')
+    text = text.replace('ё', 'е')
+    lemmas = Mystem().lemmatize(text)
+    words = []
+    for lemma in lemmas:
+        if lemma.isalpha():
+            words.append(lemma.lower())
+    return list(set(words))
+
+
+def check_bible(text='', bible=''):
+    words = bible_lemmatize(text)
+    for word in words:
+        if word in bible:
+            return True
+    return False
