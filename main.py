@@ -39,6 +39,7 @@ bot.set_my_commands([
     telebot.types.BotCommand(command='posters', description='(дебаг) афиши'),
     telebot.types.BotCommand(command='poll', description='(дебаг) опрос участия'),
     telebot.types.BotCommand(command='forms', description='(дебаг) гугл-формы'),
+    # telebot.types.BotCommand(command='op', description='bruh'),
 ])
 bot.set_chat_menu_button(menu_button=types.MenuButtonCommands('commands'))
 
@@ -187,7 +188,13 @@ def command_send(message):
         pass
     else:
         bot.set_message_reaction(message.chat.id, message.id, [types.ReactionTypeEmoji('🫡')], is_big=False)
-    
+
+@bot.message_handler(commands=['op'])
+def command_op(message):
+    orig = message.reply_to_message
+    if orig:
+        pic = telebot.types.InputMediaPhoto(open('static/when_bro.jpg', 'rb'))
+        # bot.send_media_group(message.chat.id, [pic], reply_parameters=telebot.types.ReplyParameters(orig.message_id))    
 
 def reactions(messages):
     for message in messages:
