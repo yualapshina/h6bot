@@ -217,7 +217,8 @@ def print_plans(period='week', date=None):
             info = 'Инфо: ' + lines[0]
             lines.pop(0)
             lines.append(info)
-        print('\n'.join(lines))
+        full_info = '\n'.join(lines).replace('chgk.info','pecheny.me')
+        print(full_info)
 
     return result.getvalue()   
 
@@ -786,6 +787,14 @@ def form_plans(period='week', date=None):
             removeParents=previous_parents,
             fields='id, parents',
         ).execute()
+        forms_service.forms().setPublishSettings(formId=form['formId'], body={
+            "publishSettings": {
+                "publishState": {
+                    "isPublished": True,
+                    "isAcceptingResponses": True
+                }
+            }
+        })
         
         print()
         print(event['summary'] + ': ' + form['responderUri'] + '\n')

@@ -86,7 +86,7 @@ def command_forms(message):
     args = message.text.split()    
     placeholder = bot.send_message(message.chat.id, 'Формы сейчас будут 👉👈')
     old_stdout = sys.stdout
-    text, form_ids = timetable.form_plans(args[1] if len(args)>1 else 'week', args[2] if len(args)>2 else None)
+    text = timetable.form_plans(args[1] if len(args)>1 else 'week', args[2] if len(args)>2 else None)
     sys.stdout = old_stdout
     bot.edit_message_text(text, message.chat.id, placeholder.message_id)
     
