@@ -34,14 +34,14 @@ form_questions = {
     'type': 'Кто вы?',
     'team': 'Команда',
     'team_name': 'Название команды',
-    'team_contact': 'Соцсеть для связи (пригодится, если вы у нас впервые)',
+    'team_contact': 'Соцсеть для связи с командой (пригодится, если вы у нас впервые)',
     'team_pass': 'ФИО всех игроков без пропуска в ВШЭ',
     'team_extra': 'Любые вопросы и сообщения для оргкомитета',
     'leg': 'Легионер',
     'leg_name': 'ФИО',
-    'leg_contact': 'Соцсеть для связи (пригодится, если вы у нас впервые)',
+    'leg_contact': 'Соцсеть для связи с вами (пригодится, если вы у нас впервые)',
     'leg_pass': 'У вас есть пропуск в ВШЭ?',
-    'leg_extra': 'Любые вопросы и сообщения для оргкомитета',
+    'leg_extra': 'Любые ваши вопросы и сообщения для оргкомитета',
 }
 
         
@@ -846,37 +846,56 @@ def get_guests(period='week', date=None):
         except:
             print('Ответов нет')
             continue
-        text_teams = ''
-        text_legs = ''
-        text_guests = ''
-        count_teams = 0
-        count_legs = 0
+        
+        teams = set()
+        guests = set()
+        legs = set()
+        comments = set()
         for resp in resp_list:
             if resp['answers'][questions['type']]['textAnswers']['answers'][0]['value'] == 'Команда':
-                text_teams += ', ' if len(text_teams) else ''
-                text_teams += resp['answers'][questions['team_name']]['textAnswers']['answers'][0]['value']
+                team = resp['answers'][questions['team_name']]['textAnswers']['answers'][0]['value'].strip()
+                teams.add(team)
+                    
                 try:
                     roster = resp['answers'][questions['team_pass']]['textAnswers']['answers'][0]['value']
                 except:
                     roster = ''
-                roster = roster.replace(', ', '\n')
                 roster = roster.replace(',', '\n')
-                roster = roster.replace('\n\n', '\n')
-                roster = roster.strip()
-                text_guests = '\n'.join([text_guests, roster])
-                count_teams += 1
+                roster_lines = roster.split('\n')
+                for line in roster_lines:
+                    line = line.strip()
+                    if line:
+                        guests.add(line)
+                
+                try:
+                    comment = resp['answers'][questions['team_extra']]['textAnswers']['answers'][0]['value']
+                except:
+                    comment = ''
+                if comment:
+                    comments.add((team, comment))
+                        
             else:
-                leg_name = resp['answers'][questions['leg_name']]['textAnswers']['answers'][0]['value']
-                text_legs += ', ' if len(text_legs) else ''
-                text_legs += leg_name
+                leg_name = resp['answers'][questions['leg_name']]['textAnswers']['answers'][0]['value'].strip()
                 if resp['answers'][questions['leg_pass']]['textAnswers']['answers'][0]['value'] == 'Нет':
-                    text_guests = '\n'.join([text_guests, leg_name])
-                count_legs += 1
+                    legs.add(leg_name)
+                    guests.add(leg_name)
+                    
+                try:
+                    comment = resp['answers'][questions['leg_extra']]['textAnswers']['answers'][0]['value']
+                except:
+                    comment = ''
+                if comment:
+                    comments.add((leg_name, comment))
         
-        print(f'{count_teams} команд ({text_teams})')
-        if count_legs:
-            print(f'{count_legs} легионеров ({text_legs})')
-        print(text_guests)
-        print()
+        print(f'{len(teams)} команд ({', '.join(teams)})')
+        if len(legs):
+            print(f'{len(legs)} легионеров ({', '.join(legs)})')
+        if len(guests):
+            print()
+            print('\n'.join(sorted(guests)))
+        if len(comments):
+            print()
+            print('Комментарии:')
+            print('\n'.join(map(lambda x: f'{x[0]}: {x[1]}', comments)))
 
     return result.getvalue()   

@@ -3,4 +3,5 @@
 calendar.dat
 token.json
 client_secrets.json
+current_plans.json
 __pycache__
