@@ -39,7 +39,7 @@ bot.set_my_commands([
     telebot.types.BotCommand(command='posters', description='(дебаг) афиши'),
     telebot.types.BotCommand(command='poll', description='(дебаг) опрос участия'),
     telebot.types.BotCommand(command='forms', description='(дебаг) гугл-формы'),
-    # telebot.types.BotCommand(command='op', description='bruh'),
+    telebot.types.BotCommand(command='bruh', description='when op is'),
 ])
 bot.set_chat_menu_button(menu_button=types.MenuButtonCommands('commands'))
 
@@ -189,12 +189,20 @@ def command_send(message):
     else:
         bot.set_message_reaction(message.chat.id, message.id, [types.ReactionTypeEmoji('🫡')], is_big=False)
 
-@bot.message_handler(commands=['op'])
-def command_op(message):
+@bot.message_handler(commands=['bruh'])
+def command_bruh(message):
     orig = message.reply_to_message
     if orig:
         pic = telebot.types.InputMediaPhoto(open('static/when_bro.jpg', 'rb'))
-        # bot.send_media_group(message.chat.id, [pic], reply_parameters=telebot.types.ReplyParameters(orig.message_id))    
+        if message.quote:
+            bot.send_media_group(message.chat.id, [pic], reply_parameters=telebot.types.ReplyParameters(
+                orig.message_id, 
+                quote=message.quote.text, 
+                quote_entities=message.quote.entities,
+                quote_position=message.quote.position
+            )) 
+        else:
+            bot.send_media_group(message.chat.id, [pic], reply_parameters=telebot.types.ReplyParameters(orig.message_id))
 
 def reactions(messages):
     for message in messages:
