@@ -590,11 +590,26 @@ def form_plans(period='week', date=None):
     if not events['items']:
         print('Мероприятий не найдено. Ура! Или не ура?')
         return result.getvalue()
+        
+    
+    forms_service, drive_service, calendar_service = get_services()
     
     for event in events['items']:
         if event['summary'].find('Своя игра') != -1 \
         or event['colorId'] == '8':
             continue
+            
+        try:
+            form_id = event['attachments'][0]['fileId']
+        except:
+            pass
+        else:
+            form = forms_service.forms().get(formId=form_id).execute()
+            print()
+            print(event['summary'] + ': ' + form['responderUri'] + '\n')
+            result_forms.append({'event': event['id'], 'form': form['formId']})
+            continue
+            
         
         newform = {
             'info': {
@@ -709,9 +724,7 @@ def form_plans(period='week', date=None):
             }}
         ]}
         
-        forms_service, drive_service, calendar_service = get_services()
         form = forms_service.forms().create(body=newform).execute()
-        
         ids = forms_service.forms().batchUpdate(formId=form['formId'], body=body_update).execute()['replies']
         team_section = ids[5]['createItem']['itemId']
         player_section = ids[0]['createItem']['itemId']
@@ -825,6 +838,8 @@ def get_guests(period='week', date=None):
     
     forms_service, drive_service, calendar_service = get_services()
     for event in events['items']:
+        if event['colorId'] == '8':
+            continue
         timing = datetime.datetime.fromisoformat(event['start']['dateTime'])
         print()
         print(f'{timing.day}.{timing.month:02d}, {weekdays_long[timing.weekday()]}:')
@@ -861,6 +876,7 @@ def get_guests(period='week', date=None):
                 except:
                     roster = ''
                 roster = roster.replace(',', '\n')
+                roster = roster.replace(';', '\n')
                 roster_lines = roster.split('\n')
                 for line in roster_lines:
                     line = line.strip()
