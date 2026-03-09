@@ -179,6 +179,42 @@ def get_list(date_start, date_end):
     return events
     
     
+def form_header_update(event):
+    timing = datetime.datetime.fromisoformat(event['start']['dateTime'])
+    timing_offset = timing - datetime.timedelta(minutes=15)
+    if timing.weekday() == 0:
+        timing_deadline = timing - datetime.timedelta(days=3)
+    elif timing.weekday() == 1:
+        timing_deadline = timing - datetime.timedelta(days=4)
+    else:
+        timing_deadline = timing - datetime.timedelta(days=2)
+    lines = event['description'].split('\n')
+    place = 'ул. Костина, 2б'
+    diff = None
+    for line in lines:
+        if line.find('Сложность') != -1:
+            diff = float(line[10:].replace(' ', ''))
+        if line.find('Где') != -1:
+            if line.find('TBA') == -1 and line.find('ТВА') == -1:
+                place = line[5:]              
+    description = ''
+    description += f'Дата проведения: {timing.day} {months_gen[timing.month]}, {weekdays_long[timing.weekday()]}\n'
+    description += f'Время начала: {timing_offset.hour:02d}:{timing_offset.minute:02d} - сбор, {timing.hour:02d}:{timing.minute:02d} - первый вопрос\n'
+    description += f'Место проведения: {place}\n'
+    if diff:
+        description += f'Сложность: {diff}\n'
+    description += '\nОрганизатор: Клуб Интеллектуальных Игр ВШЭ-НН (https://vk.com/chgk_hsenn)\n\n'
+    description += f'Обратите внимание! На оформление пропусков в вуз необходимо время, поэтому мы сможем допустить только тех игроков не из ВШЭ, которые зарегистрируются не позже 10 утра {timing_deadline.day} {months_gen[timing_deadline.month]}. Спасибо за понимание!'
+        
+    header_update = {'requests': [
+        {
+        'updateFormInfo': {
+            'info': {'description': (description)},
+            'updateMask': 'description',
+        }}]}
+    return header_update
+    
+    
 def print_plans(period='week', date=None):
     result = StringIO()
     sys.stdout = result
@@ -338,10 +374,10 @@ def draw_plans(period='week', date=None):
                 draw = ImageDraw.Draw(img)
                 x = 96
                 
-                if date_start.month == date_end.month:
-                    header = f'{date_start.day}-{date_end.day} {months_gen[date_start.month]}'
+                if date_start.month == date_end_pretty.month:
+                    header = f'{date_start.day}-{date_end_pretty.day} {months_gen[date_start.month]}'
                 else:
-                    header = f'{date_start.day:02d}.{date_start.month:02d} - {date_end.day:02d}.{date_end.month:02d}'
+                    header = f'{date_start.day:02d}.{date_start.month:02d} - {date_end_pretty.day:02d}.{date_end_pretty.month:02d}'
                 draw.text((x, 96), header, '#0F2D69', Bold80)
                 x_offset = draw.textlength(header, Bold80)
                 draw.text((x + x_offset, 96), ' | синхроны', '#8796B4', Regular80)
@@ -605,6 +641,8 @@ def form_plans(period='week', date=None):
             pass
         else:
             form = forms_service.forms().get(formId=form_id).execute()
+            header_update = form_header_update(event)
+            forms_service.forms().batchUpdate(formId=form['formId'], body=header_update).execute()
             print()
             print(event['summary'] + ': ' + form['responderUri'] + '\n')
             result_forms.append({'event': event['id'], 'form': form['formId']})
@@ -723,42 +761,15 @@ def form_plans(period='week', date=None):
                 'location': {'index': 9},
             }}
         ]}
+        header_update = form_header_update(event)
         
         form = forms_service.forms().create(body=newform).execute()
+        forms_service.forms().batchUpdate(formId=form['formId'], body=header_update).execute()
         ids = forms_service.forms().batchUpdate(formId=form['formId'], body=body_update).execute()['replies']
         team_section = ids[5]['createItem']['itemId']
-        player_section = ids[0]['createItem']['itemId']
-        
-        timing = datetime.datetime.fromisoformat(event['start']['dateTime'])
-        timing_offset = timing - datetime.timedelta(minutes=15)
-        if timing.weekday():
-            timing_deadline = timing - datetime.timedelta(days=2)
-        else:
-            timing_deadline = timing - datetime.timedelta(days=3)
-        lines = event['description'].split('\n')
-        place = 'ул. Костина, 2б'
-        diff = None
-        for line in lines:
-            if line.find('Сложность') != -1:
-                diff = float(line[10:].replace(' ', ''))
-            if line.find('Где') != -1:
-                if line.find('TBA') == -1 and line.find('ТВА') == -1:
-                    place = line[5:]              
-        description = ''
-        description += f'Дата проведения: {timing.day} {months_gen[timing.month]}, {weekdays_long[timing.weekday()]}\n'
-        description += f'Время начала: {timing_offset.hour:02d}:{timing_offset.minute:02d} - сбор, {timing.hour:02d}:{timing.minute:02d} - первый вопрос\n'
-        description += f'Место проведения: {place}\n'
-        if diff:
-            description += f'Сложность: {diff}\n'
-        description += '\nОрганизатор: Клуб Интеллектуальных Игр ВШЭ-НН (https://vk.com/chgk_hsenn)\n\n'
-        description += f'Обратите внимание! На оформление пропусков в вуз необходимо время, поэтому мы сможем допустить только тех игроков не из ВШЭ, которые зарегистрируются не позже 10 утра {timing_deadline.day} {months_gen[timing_deadline.month]}. Спасибо за понимание!'
-        
-        header_update = {'requests': [
+        player_section = ids[0]['createItem']['itemId']       
+        section_update = {'requests': [
             {
-            'updateFormInfo': {
-                'info': {'description': (description)},
-                'updateMask': 'description',
-            }},{
             'createItem': {
                 'item': {
                     'title': form_questions['type'],
@@ -781,7 +792,7 @@ def form_plans(period='week', date=None):
             }}
         ]}
         
-        forms_service.forms().batchUpdate(formId=form['formId'], body=header_update).execute()
+        forms_service.forms().batchUpdate(formId=form['formId'], body=section_update).execute()
         
         formfile = drive_service.files().get(fileId=form['formId'], fields='parents,webViewLink').execute()
         calendar_service.events().patch(

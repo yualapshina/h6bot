@@ -65,7 +65,10 @@ def command_list(message):
 def command_posters(message):
     args = message.text.split()
     response = timetable.draw_plans(args[1] if len(args)>1 else 'week', args[2] if len(args)>2 else None)
-    bot.send_media_group(message.chat.id, response.prepare())
+    try:
+        bot.send_media_group(message.chat.id, response.prepare())
+    except:
+        bot.send_message(message.chat.id, 'Картинки долго грузятся 👉👈')
     response.clear()
     
 @bot.message_handler(commands=['poll'])
@@ -112,11 +115,7 @@ def command_plan(message):
     period = 'week'
     
     with open('current_plans.json', 'r') as f:
-        current_plans = json.load(f)
-    if chat in current_plans and date in current_plans[chat] and 'force' not in args:
-        bot.send_message(message.chat.id, 'Неделя уже запланирована. Если хотите полностью обновить информацию, используйте аргумент force')
-        return
-    
+        current_plans = json.load(f)    
     if chat not in current_plans:
         current_plans[chat] = {}
     if date not in current_plans[chat]:
@@ -126,9 +125,13 @@ def command_plan(message):
     text = timetable.print_plans(period, date)
     sys.stdout = old_stdout
     sent_list = bot.send_message(message.chat.id, text)
+    try:
+        previous_pin = current_plans[chat][date]['list']
+    except:
+        previous_pin = None
     current_plans[chat][date]['list'] = sent_list.message_id 
     try:
-        bot.pin_chat_message(message.chat.id, current_plans[chat][date]['list'], disable_notification=True)
+        bot.pin_chat_message(message.chat.id, sent_list.message_id, disable_notification=True)
     except:
         print('! pin message error')
     
@@ -143,17 +146,21 @@ def command_plan(message):
     )
     current_plans[chat][date]['poll'] = sent_poll.message_id 
     
-    response = timetable.draw_plans(period, date)
-    sent_posters = bot.send_media_group(message.chat.id, response.prepare())
-    current_plans[chat][date]['posters'] = sent_posters[0].message_id 
-    response.clear()
-    
     sent_forms = bot.send_message(message.chat.id, 'Формы сейчас будут 👉👈')
     old_stdout = sys.stdout
     text = timetable.form_plans(period, date)
     sys.stdout = old_stdout
     bot.edit_message_text(text, message.chat.id, sent_forms.message_id)
     current_plans[chat][date]['forms'] = sent_forms.message_id 
+    
+    response = timetable.draw_plans(period, date)
+    try:
+        sent_posters = bot.send_media_group(message.chat.id, response.prepare())
+        current_plans[chat][date]['posters'] = sent_posters[0].message_id 
+    except:
+        bot.send_message(message.chat.id, 'Картинки долго грузятся 👉👈')
+        current_plans[chat][date]['posters'] = 'readTimeout'
+    response.clear()
     
     old_plans = []
     for key in current_plans[chat]:
@@ -167,6 +174,11 @@ def command_plan(message):
         except:
             print('! unpin message error')
         current_plans[chat].pop(old)
+    if previous_pin:
+        try:
+            bot.unpin_chat_message(message.chat.id, previous_pin)
+        except:
+            print('! unpin message error')
     with open('current_plans.json', 'w') as f:
         json.dump(current_plans, f)
 
