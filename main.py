@@ -1,9 +1,11 @@
 import timetable
 import wordplay
+import cli
 import telebot
 from telebot import types
 from oauth2client import client
 import random
+import time
 import datetime
 import sys
 import json
@@ -28,19 +30,24 @@ print('> auth complete!')
 token = os.environ.get("TOKEN")
 bot=telebot.TeleBot(token, threaded=False)
 
-
-bot.set_my_commands([
-    telebot.types.BotCommand(command='start', description='приветствие'),
-    telebot.types.BotCommand(command='plan', description='добавить материалы на неделю'),
-    telebot.types.BotCommand(command='guests', description='списки на дату'),
-    telebot.types.BotCommand(command='triggers', description='список скрытых талантов'),
-    telebot.types.BotCommand(command='ping', description='(дебаг) пинг'),
-    telebot.types.BotCommand(command='list', description='(дебаг) текстовое расписание'),
-    telebot.types.BotCommand(command='posters', description='(дебаг) афиши'),
-    telebot.types.BotCommand(command='poll', description='(дебаг) опрос участия'),
-    telebot.types.BotCommand(command='forms', description='(дебаг) гугл-формы'),
-    telebot.types.BotCommand(command='bruh', description='when op is'),
-])
+try:
+    bot.set_my_commands([
+        telebot.types.BotCommand(command='start', description='приветствие'),
+        telebot.types.BotCommand(command='plan', description='добавить материалы на неделю'),
+        telebot.types.BotCommand(command='guests', description='списки на дату'),
+        telebot.types.BotCommand(command='triggers', description='список скрытых талантов'),
+        telebot.types.BotCommand(command='ping', description='(дебаг) пинг'),
+        telebot.types.BotCommand(command='list', description='(дебаг) текстовое расписание'),
+        telebot.types.BotCommand(command='posters', description='(дебаг) афиши'),
+        telebot.types.BotCommand(command='poll', description='(дебаг) опрос участия'),
+        telebot.types.BotCommand(command='forms', description='(дебаг) гугл-формы'),
+        telebot.types.BotCommand(command='bruh', description='when op is'),
+    ])
+except:
+    print('! could not reach telegram')
+    print(cli.offline_dump())
+    sys.exit()
+    
 bot.set_chat_menu_button(menu_button=types.MenuButtonCommands('commands'))
 
 @bot.message_handler(commands=['start'])

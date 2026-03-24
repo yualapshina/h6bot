@@ -61,6 +61,10 @@ class ImageResponse:
     def add(self, img):
         img.save(self.prefix + str(self.count) + '.png')        
         self.count += 1
+    
+    def move_to(self, folder):
+        shutil.copytree(self.prefix, folder, dirs_exist_ok=True)
+        shutil.rmtree(self.prefix)
         
     def prepare(self):
         self.media = []
