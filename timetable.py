@@ -210,11 +210,13 @@ def form_header_update(event):
     description += '\nОрганизатор: Клуб Интеллектуальных Игр ВШЭ-НН (https://vk.com/chgk_hsenn)\n\n'
     description += f'Обратите внимание! На оформление пропусков в вуз необходимо время, поэтому мы сможем допустить только тех игроков не из ВШЭ, которые зарегистрируются не позже 10 утра {timing_deadline.day} {months_gen[timing_deadline.month]}. Спасибо за понимание!'
         
-    header_update = {'requests': [
-        {
+    header_update = {'requests': [{
         'updateFormInfo': {
-            'info': {'description': (description)},
-            'updateMask': 'description',
+            'info': {
+                'title': event['summary'],
+                'description': (description)
+            },
+            'updateMask': 'title,description',
         }}]}
     return header_update
     
@@ -647,6 +649,11 @@ def form_plans(period='week', date=None):
             form = forms_service.forms().get(formId=form_id).execute()
             header_update = form_header_update(event)
             forms_service.forms().batchUpdate(formId=form['formId'], body=header_update).execute()
+            drive_service.files().update(
+                fileId=form['formId'],
+                body={'name': f'{event['summary']} ({datetime.datetime.now().strftime('%Y%m%d %H:%M:%S')})'},
+                fields='name',
+            ).execute()
             print()
             print(event['summary'] + ': ' + form['responderUri'] + '\n')
             result_forms.append({'event': event['id'], 'form': form['formId']})
@@ -820,9 +827,7 @@ def form_plans(period='week', date=None):
                 "publishState": {
                     "isPublished": True,
                     "isAcceptingResponses": True
-                }
-            }
-        })
+        }}}).execute()
         
         print()
         print(event['summary'] + ': ' + form['responderUri'] + '\n')
@@ -917,6 +922,13 @@ def get_guests(period='week', date=None):
                     comment = ''
                 if comment:
                     comments.add((leg_name, comment))
+        
+        forms_service.forms().setPublishSettings(formId=form['formId'], body={
+            'publishSettings': {
+                'publishState': {
+                    'isPublished': True,
+                    'isAcceptingResponses': False
+            }}}).execute()
         
         print(f'{len(teams)} команд ({', '.join(teams)})')
         if len(legs):

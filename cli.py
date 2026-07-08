@@ -26,8 +26,8 @@ def offline_dump():
     text += '\n\n'
     text += timetable.form_plans(period, date)
     text += '\n\n'
-    response = timetable.draw_plans(period, date)
-    response.move_to('dump')
+    # response = timetable.draw_plans(period, date)
+    # response.move_to('dump')
 
     sys.stdout = old_stdout
     with open('dump/info.txt', 'w') as f:

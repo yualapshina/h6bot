@@ -57,7 +57,7 @@ def command_start(message):
 
 @bot.message_handler(commands=['triggers'])
 def command_triggers(message):
-    text = 'Список текущих скрытых талантов:\n⚡ реагирую на непростые\n🌸 замечаю хайку\n🌭 присоединяюсь к форсам'
+    text = 'Список текущих скрытых талантов:\n🌸 замечаю хайку\n🌭 присоединяюсь к форсам'
     bot.send_message(message.chat.id, text)
 
 @bot.message_handler(commands=['list'])
@@ -102,6 +102,12 @@ def command_forms(message):
     
 @bot.message_handler(commands=['guests'])
 def command_guests(message):
+    
+    date_sent = message.date
+    date_sent = datetime.date.fromtimestamp(date_sent)
+    if date_sent < datetime.date.today():
+        return
+    
     args = message.text.split()
     old_stdout = sys.stdout
     date = datetime.date.today() + datetime.timedelta(days=2)
@@ -112,6 +118,12 @@ def command_guests(message):
 
 @bot.message_handler(commands=['plan'])
 def command_plan(message):
+    
+    date_sent = message.date
+    date_sent = datetime.date.fromtimestamp(date_sent)
+    if date_sent < datetime.date.today():
+        return
+    
     chat = str(message.chat.id)
     args = message.text.split()
     date = datetime.date.today() - datetime.timedelta(days=datetime.date.today().weekday())
@@ -230,7 +242,8 @@ def reactions(messages):
         old_stdout = sys.stdout
         
         if wordplay.check_equi(message.text):
-            bot.set_message_reaction(message.chat.id, message.id, [types.ReactionTypeEmoji('⚡')], is_big=False)
+            # bot.set_message_reaction(message.chat.id, message.id, [types.ReactionTypeEmoji('⚡')], is_big=False)
+            pass
             
         haiku = wordplay.find_haiku(message.text)
         if haiku:
