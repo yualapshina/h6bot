@@ -9,7 +9,6 @@ from PIL import Image, ImageDraw, ImageFont
 from httplib2 import Http
 from oauth2client import client, file, tools
 from apiclient import discovery
-from googleapiclient import sample_tools
 from dotenv import load_dotenv, find_dotenv
 
 load_dotenv(find_dotenv())
@@ -51,6 +50,8 @@ class ImageResponse:
         os.mkdir(self.prefix)
         self.count = 0
         self.caption = None
+        self.media = []
+        self.files = []
         
     def set_caption(self, caption):
         self.caption = caption        
@@ -71,12 +72,11 @@ class ImageResponse:
         shutil.rmtree(self.prefix)
         
     def prepare(self):
-        self.media = []
-        self.files = []
         for i in range(self.count):
-            f = open(self.prefix + str(i) + '.png', 'rb')
+            filename = self.prefix + str(i) + '.png'
+            f = open(filename, 'rb')
             self.files.append(f)
-            self.media.append(telebot.types.InputMediaPhoto(f, self.get_caption(i)))
+            self.media.append(telebot.types.InputMediaPhoto(filename, self.get_caption(i)))
         return self.media
         
     def clear(self):
@@ -136,7 +136,10 @@ def parse_dates(period, datestr):
         queryday = datetime.datetime.strptime(datestr, "%Y%m%d")
     else:
         queryday = datetime.date.today()
-    
+
+    date_start = queryday
+    date_end = queryday
+
     if period == 'day':
         date_start = queryday
         date_end = date_start + datetime.timedelta(days=1)
@@ -199,7 +202,7 @@ def form_header_update(event):
         'updateFormInfo': {
             'info': {
                 'title': event['summary'],
-                'description': (description)
+                'description': description
             },
             'updateMask': 'title,description',
         }}]}
@@ -345,12 +348,12 @@ def draw_plans(period='week', date=None):
             response.add(img)
             
     if period == 'week' or period == 'day':
+        date_start, date_end = parse_dates('week', date)
+        date_end_pretty = date_end - datetime.timedelta(days=1)
         if period == 'week':
-            date_end_pretty = date_end - datetime.timedelta(days=1)
             response.set_caption(f'Афиши с {date_start.day:02d}.{date_start.month:02d} по {date_end_pretty.day:02d}.{date_end_pretty.month:02d}:')
         if period == 'day':
             response.set_caption(f'Афиши на {date_start.day} {months_gen[date_start.month]}:')
-        date_start, date_end = parse_dates('week', date)
         
         if len(synch):
             for event in synch:
@@ -370,7 +373,11 @@ def draw_plans(period='week', date=None):
                 timetext = f'{timing.day} {months_gen[timing.month]}, {weekdays_long[timing.weekday()]}, {timing.hour:02d}.{timing.minute:02d}'
                 draw.text((x + 80, 252), timetext, '#102D69', SemiBold64)
                 draw.text((x, 339), event['summary'], '#102D69', Regular64)
-                
+
+                diff = float(0)
+                place = None
+                fees = {}
+
                 lines = event['description'].split('\n')
                 for line in lines:
                     if line.find('Сложность') != -1:
@@ -427,6 +434,10 @@ def draw_plans(period='week', date=None):
                     timing = datetime.datetime.fromisoformat(event['start']['dateTime'])
                     timetext = f'{timing.day} {months_gen[timing.month]}, {weekdays_long[timing.weekday()]}, {timing.hour:02d}.{timing.minute:02d}'
                     draw.text((x, 470), timetext, '#102D69', SemiBold128)
+
+                    diff = float(0)
+                    place = None
+
                     lines = event['description'].split('\n')
                     for line in lines:
                         if line.find('Сложность') != -1:
@@ -462,6 +473,9 @@ def draw_plans(period='week', date=None):
                     timing = datetime.datetime.fromisoformat(event['start']['dateTime'])
                     timetext = f'{timing.day} {months_gen[timing.month]}, {weekdays_long[timing.weekday()]}, {timing.hour:02d}.{timing.minute:02d}'
                     draw.text((x, 470), timetext, '#102D69', SemiBold128)
+
+                    place = None
+
                     lines = event['description'].split('\n')
                     for line in lines:
                         if line.find('Где') != -1:
@@ -486,10 +500,10 @@ def draw_plans(period='week', date=None):
                     img = Image.open('static/bg_club.png')
                     draw = ImageDraw.Draw(img)
                     x = 96
-                    if date_start.month == date_end.month:
-                        header = f'{date_start.day}-{date_end.day} {months_gen[date_start.month]}'
+                    if date_start.month == date_end_pretty.month:
+                        header = f'{date_start.day}-{date_end_pretty.day} {months_gen[date_start.month]}'
                     else:
-                        header = f'{date_start.day:02d}.{date_start.month:02d} - {date_end.day:02d}.{date_end.month:02d}'
+                        header = f'{date_start.day:02d}.{date_start.month:02d} - {date_end_pretty.day:02d}.{date_end_pretty.month:02d}'
                     draw.text((x, 96), header, '#0F2D69', Bold80)
                     x_offset = draw.textlength(header, Bold80)
                     draw.text((x + x_offset, 96), ' | клуб', '#8796B4', Regular80)
@@ -499,8 +513,11 @@ def draw_plans(period='week', date=None):
                     draw.text((x + 80, 252), timetext, '#102D69', SemiBold64)
                     draw.text((x, 339),event['summary'],'#102D69', Regular64)
                     lines = event['description'].split('\n')
-                    diff = None
-                    fees = None
+
+                    diff = float(0)
+                    place = None
+                    fees = {}
+
                     for line in lines:
                         if line.find('Сложность') != -1:
                             diff = float(line[10:].replace(' ', ''))
@@ -552,7 +569,6 @@ def draw_plans(period='week', date=None):
     
     
 def poll_plans(period='week', date=None):
-    question = 'default question'
     options = []
     try:
         date_start, date_end = parse_dates(period, date)

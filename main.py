@@ -4,8 +4,6 @@ import cli
 import telebot
 from telebot import types
 from oauth2client import client
-import random
-import time
 import datetime
 import sys
 import json
@@ -133,8 +131,8 @@ def command_plan(message):
     date = date.strftime("%Y%m%d")
     period = 'week'
     
-    with open('current_plans.json', 'r') as f:
-        current_plans = json.load(f)    
+    with open('current_plans.json', 'r') as fp:
+        current_plans = json.load(fp)
     if chat not in current_plans:
         current_plans[chat] = {}
     if date not in current_plans[chat]:
@@ -160,8 +158,7 @@ def command_plan(message):
         question, 
         options, 
         is_anonymous=False, 
-        allows_multiple_answers=True, 
-        allows_revoting=True,
+        allows_multiple_answers=True,
         is_closed=is_closed
     )
     current_plans[chat][date]['poll'] = sent_poll.message_id 
@@ -199,8 +196,8 @@ def command_plan(message):
             bot.unpin_chat_message(message.chat.id, previous_pin)
         except:
             print('! unpin message error')
-    with open('current_plans.json', 'w') as f:
-        json.dump(current_plans, f)
+    with open('current_plans.json', 'w') as fp:
+        json.dump(current_plans, fp)
 
 
 @bot.message_handler(commands=['ping'])
@@ -225,7 +222,7 @@ def command_send(message):
 def command_bruh(message):
     orig = message.reply_to_message
     if orig:
-        pic = telebot.types.InputMediaPhoto(open('static/when_bro.jpg', 'rb'))
+        pic = telebot.types.InputMediaPhoto('static/when_bro.jpg')
         if message.quote:
             bot.send_media_group(message.chat.id, [pic], reply_parameters=telebot.types.ReplyParameters(
                 orig.message_id, 
@@ -259,8 +256,8 @@ def reactions(messages):
 
 
 def join_in(messages):
-    with open('current_plans.json', 'r') as f:
-        current_plans = json.load(f)
+    with open('current_plans.json', 'r') as fp:
+        current_plans = json.load(fp)
         
     for message in messages:
         chat = str(message.chat.id)
@@ -298,8 +295,8 @@ def join_in(messages):
             if current_plans[chat]['last']['type'] == 'sticker':
                 bot.send_sticker(chat, current_plans[chat]['last']['message'])
             current_plans[chat]['last']['count'] = 0
-    with open('current_plans.json', 'w') as f:
-        json.dump(current_plans, f)
+    with open('current_plans.json', 'w') as fp:
+        json.dump(current_plans, fp)
         
 
 print('> bot running!')
