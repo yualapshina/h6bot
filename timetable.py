@@ -63,6 +63,10 @@ class ImageResponse:
         self.count += 1
     
     def move_to(self, folder):
+        for dirent in os.scandir(folder): 
+            root, ext = os.path.splitext(dirent.name)
+            if ext == '.png':
+                os.remove(dirent.path)
         shutil.copytree(self.prefix, folder, dirs_exist_ok=True)
         shutil.rmtree(self.prefix)
         
@@ -84,9 +88,9 @@ class ImageResponse:
 def auth():
     SCOPES = [
         "https://www.googleapis.com/auth/forms.body",
-        "https://www.googleapis.com/auth/drive.file"
+        "https://www.googleapis.com/auth/drive.file",
+        "https://www.googleapis.com/auth/calendar.events.owned",
     ]
-    DISCOVERY_DOC = "https://forms.googleapis.com/$discovery/rest?version=v1"
     store = file.Storage("token.json")
     try:
         creds = store.get()
@@ -98,32 +102,18 @@ def auth():
         with open('token.json', 'w') as token:
             token.write(creds.to_json())
 
-    forms = discovery.build(
-        "forms",
-        "v1",
-        http=creds.authorize(Http()),
-        discoveryServiceUrl=DISCOVERY_DOC,
-        static_discovery=False,
-    )
-    drive = discovery.build("drive", "v3", credentials=creds)
-    tempform = forms.forms().create(body={
+    forms_service, drive_service, calendar_service = get_services()
+
+    tempform = forms_service.forms().create(body={
         'info': {
                     'title': 'tempform',
                     'documentTitle': f'tempform ({datetime.datetime.now().strftime('%Y%m%d %H:%M:%S')})'
                 }
     }).execute()
-    drive.files().delete(fileId=tempform['formId']).execute()
-    
-    calendar, flags = sample_tools.init(
-        sys.argv,
-        "calendar",
-        "v3",
-        __doc__,
-        __file__,
-        scope="https://www.googleapis.com/auth/calendar.events.owned",
-    )
+    drive_service.files().delete(fileId=tempform['formId']).execute()
+
     calendar_id = os.environ.get("CALENDAR")
-    calendar.events().list(calendarId=calendar_id).execute()
+    calendar_service.events().list(calendarId=calendar_id).execute()
 
 
 def get_services():
@@ -137,14 +127,7 @@ def get_services():
         static_discovery=False,
     )
     drive = discovery.build("drive", "v3", credentials=creds)
-    calendar, flags = sample_tools.init(
-        sys.argv,
-        "calendar",
-        "v3",
-        __doc__,
-        __file__,
-        scope="https://www.googleapis.com/auth/calendar.events",
-    )
+    calendar = discovery.build("calendar", "v3", credentials=creds)
     return forms, drive, calendar
 
 
@@ -208,7 +191,9 @@ def form_header_update(event):
     if diff:
         description += f'Сложность: {diff}\n'
     description += '\nОрганизатор: Клуб Интеллектуальных Игр ВШЭ-НН (https://vk.com/chgk_hsenn)\n\n'
-    description += f'Обратите внимание! На оформление пропусков в вуз необходимо время, поэтому мы сможем допустить только тех игроков не из ВШЭ, которые зарегистрируются не позже 10 утра {timing_deadline.day} {months_gen[timing_deadline.month]}. Спасибо за понимание!'
+    description += (f'Обратите внимание! На оформление пропусков в вуз необходимо время, поэтому мы сможем допустить '
+                    f'только тех игроков не из ВШЭ, которые зарегистрируются не позже 12 часов {timing_deadline.day}'
+                    f' {months_gen[timing_deadline.month]}. Спасибо за понимание!')
         
     header_update = {'requests': [{
         'updateFormInfo': {
@@ -309,15 +294,8 @@ def draw_plans(period='week', date=None):
         response.add(img)
         return response
       
-    service, flags = sample_tools.init(
-        sys.argv,
-        "calendar",
-        "v3",
-        __doc__,
-        __file__,
-        scope="https://www.googleapis.com/auth/calendar.readonly",
-    )
-    colors = service.colors().get().execute()
+    forms_service, drive_service, calendar_service = get_services()
+    colors = calendar_service.colors().get().execute()
     colormap = {}
     for color_id, color in colors['event'].items():
         colormap[color_id] = color['background']
@@ -469,12 +447,9 @@ def draw_plans(period='week', date=None):
                         draw.text((x + x_offset, 774), place, '#7081A5', Regular96)
                     draw.text((x, 774 + y_offset), 'взнос: ', '#102D69', Regular96)
                     x_offset = draw.textlength('взнос: ', Regular96)
-                    draw.text((x + x_offset, 774 + y_offset), 'студенческие сборные команды - 300', '#7081A5', Regular96)
+                    draw.text((x + x_offset, 774 + y_offset), 'студенческие сборные команды - 600', '#7081A5', Regular96)
                     y_offset += 130
-                    draw.text((x + x_offset, 774 + y_offset), 'студенты одного вуза и школьники - ', '#7081A5', Regular96)
-                    y_offset += 130
-                    x_offset += 880
-                    draw.text((x + x_offset, 774 + y_offset), 'бесплатно', '#7081A5', Regular96)
+                    draw.text((x + x_offset, 774 + y_offset), 'студенты одного вуза - бесплатно', '#7081A5', Regular96)
                     response.add(img)
                     
                 elif event['summary'].find('Своя игра') != -1:
@@ -594,7 +569,7 @@ def poll_plans(period='week', date=None):
         options.append(telebot.types.InputPollOption('Не ура :('))
         return question, options, True
     
-    question = 'Готов сыграть:'    
+    question = 'Готов прийти:'
     exclude = ['7', '8']
     for i, event in enumerate(events['items']):
         if len(options) == 9:
@@ -603,8 +578,10 @@ def poll_plans(period='week', date=None):
         if event['colorId'] not in exclude:
             timing = datetime.datetime.fromisoformat(event['start']['dateTime'])
             option = f'{event['summary']} ({weekdays_long[timing.weekday()]})'
+            if event['description'].find('Чемпионат') != -1:
+                option += ' (ЧГ)'
             options.append(telebot.types.InputPollOption(option))
-    options.append(telebot.types.InputPollOption('да, нет, другое'))
+    options.append(telebot.types.InputPollOption('тык'))
        
     return question, options, False
     
@@ -655,7 +632,7 @@ def form_plans(period='week', date=None):
                 fields='name',
             ).execute()
             print()
-            print(event['summary'] + ': ' + form['responderUri'] + '\n')
+            print(event['summary'] + ': ' + form['responderUri'])
             result_forms.append({'event': event['id'], 'form': form['formId']})
             continue
             
@@ -665,7 +642,8 @@ def form_plans(period='week', date=None):
                 'title': event['summary'],
                 'documentTitle': f'{event['summary']} ({datetime.datetime.now().strftime('%Y%m%d %H:%M:%S')})'
             },
-        }        
+        }
+        header_update = form_header_update(event)
         body_update = {'requests': [
             {
             'createItem': {
@@ -772,14 +750,67 @@ def form_plans(period='week', date=None):
                 'location': {'index': 9},
             }}
         ]}
-        header_update = form_header_update(event)
+        individual_update = {'requests': [
+            {
+                'createItem': {
+                    'item': {
+                        'title': form_questions['leg_name'],
+                        'questionItem': {'question': {
+                            'required': True,
+                            'textQuestion': {}
+                        }},
+                    },
+                    'location': {'index': 0},
+                }}, {
+                'createItem': {
+                    'item': {
+                        'title': form_questions['leg_contact'],
+                        'questionItem': {'question': {
+                            'textQuestion': {}
+                        }},
+                    },
+                    'location': {'index': 1},
+                }}, {
+                'createItem': {
+                    'item': {
+                        'title': form_questions['leg_pass'],
+                        'questionItem': {'question': {
+                            'required': True,
+                            'choiceQuestion': {
+                                'type': 'RADIO',
+                                'options': [{
+                                    'value': 'Да',
+                                    'goToAction': 'SUBMIT_FORM'
+                                }, {
+                                    'value': 'Нет',
+                                    'goToAction': 'SUBMIT_FORM'
+                                }
+                                ]
+                            }
+                        }},
+                    },
+                    'location': {'index': 2},
+                }}, {
+                'createItem': {
+                    'item': {
+                        'title': form_questions['leg_extra'],
+                        'questionItem': {'question': {
+                            'textQuestion': {}
+                        }},
+                    },
+                    'location': {'index': 3},
+                }}
+        ]}
         
         form = forms_service.forms().create(body=newform).execute()
         forms_service.forms().batchUpdate(formId=form['formId'], body=header_update).execute()
-        ids = forms_service.forms().batchUpdate(formId=form['formId'], body=body_update).execute()['replies']
-        team_section = ids[5]['createItem']['itemId']
-        player_section = ids[0]['createItem']['itemId']       
-        section_update = {'requests': [
+        if event['description'].find('Индивидуальная') != -1:
+            forms_service.forms().batchUpdate(formId=form['formId'], body=individual_update).execute()
+        else:
+            ids = forms_service.forms().batchUpdate(formId=form['formId'], body=body_update).execute()['replies']
+            team_section = ids[5]['createItem']['itemId']
+            player_section = ids[0]['createItem']['itemId']
+            section_update = {'requests': [
             {
             'createItem': {
                 'item': {
@@ -802,8 +833,7 @@ def form_plans(period='week', date=None):
                 'location': {'index': 0},
             }}
         ]}
-        
-        forms_service.forms().batchUpdate(formId=form['formId'], body=section_update).execute()
+            forms_service.forms().batchUpdate(formId=form['formId'], body=section_update).execute()
         
         formfile = drive_service.files().get(fileId=form['formId'], fields='parents,webViewLink').execute()
         calendar_service.events().patch(
@@ -830,7 +860,7 @@ def form_plans(period='week', date=None):
         }}}).execute()
         
         print()
-        print(event['summary'] + ': ' + form['responderUri'] + '\n')
+        print(event['summary'] + ': ' + form['responderUri'])
         result_forms.append({'event': event['id'], 'form': form['formId']})
     if not len(result_forms):
         print('(не нужны ни на одно мероприятие)')
@@ -866,6 +896,14 @@ def get_guests(period='week', date=None):
         print(f'{event['summary']}')
         form_id = event['attachments'][0]['fileId']
         form = forms_service.forms().get(formId=form_id).execute()
+        
+        forms_service.forms().setPublishSettings(formId=form['formId'], body={
+            'publishSettings': {
+                'publishState': {
+                    'isPublished': True,
+                    'isAcceptingResponses': False
+            }}}).execute()
+        
         inverted = {value: key for key, value in form_questions.items()}
         questions = {}
         for question in form['items']:
@@ -881,64 +919,82 @@ def get_guests(period='week', date=None):
         except:
             print('Ответов нет')
             continue
-        
-        teams = set()
-        guests = set()
-        legs = set()
-        comments = set()
-        for resp in resp_list:
-            if resp['answers'][questions['type']]['textAnswers']['answers'][0]['value'] == 'Команда':
-                team = resp['answers'][questions['team_name']]['textAnswers']['answers'][0]['value'].strip()
-                teams.add(team)
-                    
-                try:
-                    roster = resp['answers'][questions['team_pass']]['textAnswers']['answers'][0]['value']
-                except:
-                    roster = ''
-                roster = roster.replace(',', '\n')
-                roster = roster.replace(';', '\n')
-                roster_lines = roster.split('\n')
-                for line in roster_lines:
-                    line = line.strip()
-                    if line:
-                        guests.add(line)
-                
-                try:
-                    comment = resp['answers'][questions['team_extra']]['textAnswers']['answers'][0]['value']
-                except:
-                    comment = ''
-                if comment:
-                    comments.add((team, comment))
-                        
-            else:
+
+        if event['description'].find('Индивидуальная') != -1:
+            players = set()
+            guests = set()
+            comments = set()
+            for resp in resp_list:
                 leg_name = resp['answers'][questions['leg_name']]['textAnswers']['answers'][0]['value'].strip()
+                players.add(leg_name)
                 if resp['answers'][questions['leg_pass']]['textAnswers']['answers'][0]['value'] == 'Нет':
-                    legs.add(leg_name)
                     guests.add(leg_name)
-                    
                 try:
                     comment = resp['answers'][questions['leg_extra']]['textAnswers']['answers'][0]['value']
                 except:
                     comment = ''
                 if comment:
                     comments.add((leg_name, comment))
+
+            print(f'{len(players)} участников ({', '.join(map(lambda x: x.split()[0], players))})')
+            if len(guests):
+                print()
+                print('\n'.join(sorted(guests)))
+            if len(comments):
+                print()
+                print('Комментарии:')
+                print('\n'.join(map(lambda x: f'{x[0]}: {x[1]}', comments)))
+        else:
+            teams = set()
+            guests = set()
+            legs = set()
+            comments = set()
+            for resp in resp_list:
+                if resp['answers'][questions['type']]['textAnswers']['answers'][0]['value'] == 'Команда':
+                    team = resp['answers'][questions['team_name']]['textAnswers']['answers'][0]['value'].strip()
+                    teams.add(team)
+                    
+                    try:
+                        roster = resp['answers'][questions['team_pass']]['textAnswers']['answers'][0]['value']
+                    except:
+                        roster = ''
+                    roster = roster.replace(',', '\n')
+                    roster = roster.replace(';', '\n')
+                    roster_lines = roster.split('\n')
+                    for line in roster_lines:
+                        line = line.strip()
+                        if line:
+                            guests.add(line)
+                
+                    try:
+                        comment = resp['answers'][questions['team_extra']]['textAnswers']['answers'][0]['value']
+                    except:
+                        comment = ''
+                    if comment:
+                        comments.add((team, comment))
+                        
+                else:
+                    leg_name = resp['answers'][questions['leg_name']]['textAnswers']['answers'][0]['value'].strip()
+                    if resp['answers'][questions['leg_pass']]['textAnswers']['answers'][0]['value'] == 'Нет':
+                        legs.add(leg_name)
+                        guests.add(leg_name)
+                    
+                    try:
+                        comment = resp['answers'][questions['leg_extra']]['textAnswers']['answers'][0]['value']
+                    except:
+                        comment = ''
+                    if comment:
+                        comments.add((leg_name, comment))
         
-        forms_service.forms().setPublishSettings(formId=form['formId'], body={
-            'publishSettings': {
-                'publishState': {
-                    'isPublished': True,
-                    'isAcceptingResponses': False
-            }}}).execute()
-        
-        print(f'{len(teams)} команд ({', '.join(teams)})')
-        if len(legs):
-            print(f'{len(legs)} легионеров ({', '.join(legs)})')
-        if len(guests):
-            print()
-            print('\n'.join(sorted(guests)))
-        if len(comments):
-            print()
-            print('Комментарии:')
-            print('\n'.join(map(lambda x: f'{x[0]}: {x[1]}', comments)))
+            print(f'{len(teams)} команд ({', '.join(teams)})')
+            if len(legs):
+                print(f'{len(legs)} легионеров ({', '.join(legs)})')
+            if len(guests):
+                print()
+                print('\n'.join(sorted(guests)))
+            if len(comments):
+                print()
+                print('Комментарии:')
+                print('\n'.join(map(lambda x: f'{x[0]}: {x[1]}', comments)))
 
     return result.getvalue()   

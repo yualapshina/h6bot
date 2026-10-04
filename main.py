@@ -161,6 +161,7 @@ def command_plan(message):
         options, 
         is_anonymous=False, 
         allows_multiple_answers=True, 
+        allows_revoting=True,
         is_closed=is_closed
     )
     current_plans[chat][date]['poll'] = sent_poll.message_id 
@@ -253,7 +254,7 @@ def reactions(messages):
             if not wordplay.check_bible(message.text, bible):
                 reply = '(ни одного из этих слов нет в Библии)'
                 # bot.send_message(message.chat.id, reply, reply_parameters=telebot.types.ReplyParameters(message.id))
-            
+         
         sys.stdout = old_stdout
 
 
