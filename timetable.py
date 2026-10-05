@@ -89,6 +89,7 @@ def auth():
     SCOPES = [
         "https://www.googleapis.com/auth/forms.body",
         "https://www.googleapis.com/auth/drive.file",
+        "https://www.googleapis.com/auth/drive.metadata",
         "https://www.googleapis.com/auth/calendar.events.owned",
     ]
     store = file.Storage("token.json")
@@ -864,7 +865,7 @@ def form_plans(period='week', date=None):
         previous_parents = ','.join(formfile.get('parents'))
         drive_service.files().update(
             fileId=form['formId'],
-            addParents=os.environ.get("FOLDER"),
+            addParents=os.environ.get("FORM_FOLDER"),
             removeParents=previous_parents,
             fields='id, parents',
         ).execute()
